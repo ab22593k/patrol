@@ -76,12 +76,12 @@ class BuildMacOSCommand extends PatrolCommand {
       ),
     );
 
-    final config = _pubspecReader.read();
+    final config = await _pubspecReader.read();
     final testFileSuffix = config.testFileSuffix;
 
     // Check compatibility between CLI and package versions
     if (boolArg('check-compatibility')) {
-      final patrolVersion = _pubspecReader.getPatrolVersion();
+      final patrolVersion = await _pubspecReader.getPatrolVersion();
       await _compatibilityChecker.checkVersionsCompatibilityForBuild(
         patrolVersion: patrolVersion,
       );
@@ -89,8 +89,8 @@ class BuildMacOSCommand extends PatrolCommand {
 
     final target = stringsArg('target');
     final targets = target.isNotEmpty
-        ? _testFinder.findTests(target, testFileSuffix)
-        : _testFinder.findAllTests(
+        ? await _testFinder.findTests(target, testFileSuffix)
+        : await _testFinder.findAllTests(
             excludes: stringsArg('exclude').toSet(),
             testFileSuffix: testFileSuffix,
           );
@@ -110,7 +110,7 @@ class BuildMacOSCommand extends PatrolCommand {
     }
     final entrypoint = _testBundler.bundledTestFile;
     if (boolArg('generate-bundle')) {
-      _testBundler.createTestBundle(targets, tags, excludeTags);
+      await _testBundler.createTestBundle(targets, tags, excludeTags);
     }
 
     final flavor = stringArg('flavor') ?? config.macos.flavor;
@@ -133,7 +133,7 @@ class BuildMacOSCommand extends PatrolCommand {
     final displayLabel = boolArg('label');
 
     final customDartDefines = {
-      ..._dartDefinesReader.fromFile(),
+      ...await _dartDefinesReader.fromFile(),
       ..._dartDefinesReader.fromCli(args: stringsArg('dart-define')),
     };
     final internalDartDefines = {

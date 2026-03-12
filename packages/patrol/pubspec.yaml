@@ -15,6 +15,7 @@ screenshots:
 environment:
   sdk: '>=3.8.0 <4.0.0'
   flutter: '>=3.32.0'
+resolution: workspace
 
 dependencies:
   boolean_selector: ^2.1.1

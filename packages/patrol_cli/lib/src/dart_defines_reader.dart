@@ -13,15 +13,15 @@ class DartDefinesReader {
 
   Map<String, String> fromCli({required List<String> args}) => _parse(args);
 
-  Map<String, String> fromFile() {
+  Future<Map<String, String>> fromFile() async {
     final filePath = _fs.path.join(_projectRoot.path, '.patrol.env');
     final file = _fs.file(filePath);
 
-    if (!file.existsSync()) {
+    if (!await file.exists()) {
       return {};
     }
 
-    final configRaw = file.readAsStringSync();
+    final configRaw = await file.readAsString();
     final lines = configRaw
         .split('\n')
         .map((line) => line.trim())
@@ -88,19 +88,19 @@ class DartDefinesReader {
   /// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
   /// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-  Map<String, Object?> extractDartDefineConfigJsonMap(
+  Future<Map<String, Object?>> extractDartDefineConfigJsonMap(
     List<String> configFilePaths,
-  ) {
+  ) async {
     final dartDefineConfigJsonMap = <String, Object?>{};
 
     for (final path in configFilePaths) {
-      if (!_fs.isFileSync(path)) {
+      if (!await _fs.file(path).exists()) {
         throw Exception(
           'Did not find the file passed to "--dart-define-from-file". Path: $path',
         );
       }
 
-      final configRaw = _fs.file(path).readAsStringSync();
+      final configRaw = await _fs.file(path).readAsString();
 
       // Determine whether the file content is JSON or .env format.
       String configJsonRaw;

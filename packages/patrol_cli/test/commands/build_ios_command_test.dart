@@ -74,22 +74,26 @@ void main() {
           excludes: any(named: 'excludes'),
           testFileSuffix: any(named: 'testFileSuffix'),
         ),
-      ).thenReturn(['integration_test/app_test.dart']);
+      ).thenAnswer((_) async => ['integration_test/app_test.dart']);
 
       when(() => mockTestBundler.bundledTestFile).thenReturn(
         MemoryFileSystem().file('integration_test/test_bundle.dart'),
       );
 
-      when(() => mockDartDefinesReader.fromFile()).thenReturn({});
+      when(
+        () => mockTestBundler.createTestBundle(any(), any(), any()),
+      ).thenAnswer((_) async {});
+
+      when(() => mockDartDefinesReader.fromFile()).thenAnswer((_) async => {});
       when(
         () => mockDartDefinesReader.fromCli(args: any(named: 'args')),
       ).thenReturn({});
       when(
         () => mockDartDefinesReader.extractDartDefineConfigJsonMap(any()),
-      ).thenReturn({});
+      ).thenAnswer((_) async => {});
 
-      when(() => mockPubspecReader.read()).thenReturn(
-        PatrolPubspecConfig(
+      when(() => mockPubspecReader.read()).thenAnswer(
+        (_) async => PatrolPubspecConfig(
           flutterPackageName: 'test_app',
           android: AndroidPubspecConfig.empty(),
           ios: IOSPubspecConfig(
@@ -99,6 +103,9 @@ void main() {
           macos: MacOSPubspecConfig.empty(),
         ),
       );
+      when(
+        () => mockPubspecReader.getPatrolVersion(),
+      ).thenAnswer((_) async => '1.0.0');
 
       when(() => mockIosTestBackend.build(any())).thenAnswer((_) async {});
       when(
@@ -203,8 +210,8 @@ void main() {
       test(
         'builds iOS app with flavor from config when not provided',
         () async {
-          when(() => mockPubspecReader.read()).thenReturn(
-            PatrolPubspecConfig(
+          when(() => mockPubspecReader.read()).thenAnswer(
+            (_) async => PatrolPubspecConfig(
               flutterPackageName: 'test_app',
               android: AndroidPubspecConfig.empty(),
               ios: IOSPubspecConfig(
@@ -338,10 +345,12 @@ void main() {
       });
 
       test('builds iOS app with specific test targets', () async {
-        when(() => mockTestFinder.findTests(any(), any())).thenReturn([
-          'integration_test/specific_test.dart',
-          'integration_test/another_test.dart',
-        ]);
+        when(() => mockTestFinder.findTests(any(), any())).thenAnswer(
+          (_) async => [
+            'integration_test/specific_test.dart',
+            'integration_test/another_test.dart',
+          ],
+        );
 
         final result = await runCommand([
           '--target',
@@ -399,7 +408,9 @@ void main() {
       });
 
       test('runs compatibility check when enabled', () async {
-        when(() => mockPubspecReader.getPatrolVersion()).thenReturn('2.0.0');
+        when(
+          () => mockPubspecReader.getPatrolVersion(),
+        ).thenAnswer((_) async => '2.0.0');
 
         final result = await runCommand(['--check-compatibility']);
 

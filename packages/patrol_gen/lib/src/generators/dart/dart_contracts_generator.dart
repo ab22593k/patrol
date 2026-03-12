@@ -3,6 +3,7 @@ import 'package:path/path.dart' as path;
 import 'package:patrol_gen/src/generators/dart/dart_config.dart';
 import 'package:patrol_gen/src/generators/output_file.dart';
 import 'package:patrol_gen/src/schema.dart';
+import 'package:pub_semver/pub_semver.dart';
 
 class DartContractsGenerator {
   OutputFile generate(Schema schema, DartConfig config) {
@@ -15,7 +16,8 @@ class DartContractsGenerator {
       buffer.writeln(_createMessage(messageDefintion));
     }
 
-    final content = DartFormatter().format(buffer.toString());
+    final content = DartFormatter(languageVersion: Version(3, 0, 0))
+        .format(buffer.toString());
 
     return OutputFile(filename: config.contractsFilename, content: content);
   }

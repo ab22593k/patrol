@@ -45,76 +45,79 @@ class AndroidTestBackend {
   late final String? javaPath;
 
   Future<void> build(AndroidAppOptions options) async {
-    await buildApkConfigOnly(options.flutter);
-    await loadJavaPathFromFlutterDoctor(options.flutter.command);
+    await Future.wait([
+      buildApkConfigOnly(options.flutter),
+      loadJavaPathFromFlutterDoctor(options.flutter.command),
+    ]);
     await detectOrchestratorVersion(options);
 
     await _disposeScope.run((scope) async {
       final subject = options.description;
       final task = _logger.task('Building $subject');
 
-      Process process;
-      int exitCode;
-
-      // :app:assembleDebug
-
-      process =
-          await _processManager.start(
-              options.toGradleAssembleInvocation(
-                isWindows: _platform.isWindows,
-              ),
-              runInShell: true,
-              workingDirectory: _rootDirectory.childDirectory('android').path,
-              environment: switch (javaPath) {
-                final String javaPath => {'JAVA_HOME': javaPath},
-                _ => {},
-              },
-            )
-            ..disposedBy(scope);
-      process.listenStdOut((l) => _logger.detail('\t: $l')).disposedBy(scope);
-      process.listenStdErr((l) => _logger.err('\t$l')).disposedBy(scope);
-      exitCode = await process.exitCode;
-      if (exitCode == exitCodeInterrupted) {
-        const cause = 'Gradle build interrupted';
-        task.fail('Failed to build $subject ($cause)');
-        throw Exception(cause);
-      } else if (exitCode != 0) {
-        final cause = 'Gradle build failed with code $exitCode';
-        task.fail('Failed to build $subject ($cause)');
-        throw Exception(cause);
-      }
-
-      // :app:assembleDebugAndroidTest
-
-      process =
-          await _processManager.start(
-              options.toGradleAssembleTestInvocation(
-                isWindows: _platform.isWindows,
-              ),
-              runInShell: true,
-              workingDirectory: _rootDirectory.childDirectory('android').path,
-              environment: switch (javaPath) {
-                final String javaPath => {'JAVA_HOME': javaPath},
-                _ => {},
-              },
-            )
-            ..disposedBy(scope);
-      process.listenStdOut((l) => _logger.detail('\t: $l')).disposedBy(scope);
-      process.listenStdErr((l) => _logger.err('\t$l')).disposedBy(scope);
-
-      exitCode = await process.exitCode;
-      if (exitCode == 0) {
+      try {
+        await Future.wait([
+          _buildApp(options, scope),
+          _buildTest(options, scope),
+        ]);
         task.complete('Completed building $subject');
-      } else if (exitCode == exitCodeInterrupted) {
-        const cause = 'Gradle build interrupted';
-        task.fail('Failed to build $subject ($cause)');
-        throw Exception(cause);
-      } else {
-        final cause = 'Gradle build failed with code $exitCode';
-        task.fail('Failed to build $subject ($cause)');
-        throw Exception(cause);
+      } catch (err) {
+        task.fail('Failed to build $subject');
+        rethrow;
       }
     });
+  }
+
+  Future<void> _buildApp(AndroidAppOptions options, DisposeScope scope) async {
+    final process =
+        await _processManager.start(
+            options.toGradleAssembleInvocation(isWindows: _platform.isWindows),
+            runInShell: true,
+            workingDirectory: _rootDirectory.childDirectory('android').path,
+            environment: switch (javaPath) {
+              final String javaPath => {'JAVA_HOME': javaPath},
+              _ => {},
+            },
+          )
+          ..disposedBy(scope);
+    process.listenStdOut((l) => _logger.detail('\t: $l')).disposedBy(scope);
+    process.listenStdErr((l) => _logger.err('\t$l')).disposedBy(scope);
+
+    final exitCode = await process.exitCode;
+    if (exitCode == exitCodeInterrupted) {
+      const cause = 'Gradle app build interrupted';
+      throw Exception(cause);
+    } else if (exitCode != 0) {
+      final cause = 'Gradle app build failed with code $exitCode';
+      throw Exception(cause);
+    }
+  }
+
+  Future<void> _buildTest(AndroidAppOptions options, DisposeScope scope) async {
+    final process =
+        await _processManager.start(
+            options.toGradleAssembleTestInvocation(
+              isWindows: _platform.isWindows,
+            ),
+            runInShell: true,
+            workingDirectory: _rootDirectory.childDirectory('android').path,
+            environment: switch (javaPath) {
+              final String javaPath => {'JAVA_HOME': javaPath},
+              _ => {},
+            },
+          )
+          ..disposedBy(scope);
+    process.listenStdOut((l) => _logger.detail('\t: $l')).disposedBy(scope);
+    process.listenStdErr((l) => _logger.err('\t$l')).disposedBy(scope);
+
+    final exitCode = await process.exitCode;
+    if (exitCode == exitCodeInterrupted) {
+      const cause = 'Gradle test build interrupted';
+      throw Exception(cause);
+    } else if (exitCode != 0) {
+      final cause = 'Gradle test build failed with code $exitCode';
+      throw Exception(cause);
+    }
   }
 
   /// Load the Java path from the output of `flutter doctor`.
@@ -328,10 +331,11 @@ class AndroidTestBackend {
   }
 
   Future<void> uninstall(String appId, Device device) async {
-    _logger.detail('Uninstalling $appId from ${device.name}');
-    await _adb.uninstall(appId, device: device.id);
-    _logger.detail('Uninstalling $appId.test from ${device.name}');
-    await _adb.uninstall('$appId.test', device: device.id);
+    _logger.detail('Uninstalling $appId and $appId.test from ${device.name}');
+    await Future.wait([
+      _adb.uninstall(appId, device: device.id),
+      _adb.uninstall('$appId.test', device: device.id),
+    ]);
   }
 
   /// Generates the Android test report path based on build mode and flavor.

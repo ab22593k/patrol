@@ -480,7 +480,7 @@ To install a specific version of Patrol CLI, run:
       final rootDir = findRootDirectory(_fs);
       if (rootDir != null) {
         final pubspecReader = PubspecReader(projectRoot: rootDir);
-        patrolVersion = pubspecReader.getPatrolVersion();
+        patrolVersion = await pubspecReader.getPatrolVersion();
       }
 
       final buffer = StringBuffer();

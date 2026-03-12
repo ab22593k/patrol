@@ -14,12 +14,12 @@ Map<String, String> mergeKeys({
 }
 
 /// Merge dart defines from files and from cli arguments.
-Map<String, String> mergeDartDefines(
+Future<Map<String, String>> mergeDartDefines(
   List<String> dartDefineFromFilePaths,
   Map<String, String> dartDefines,
   DartDefinesReader dartDefinesReader,
-) {
-  final dartDefineConfigJsonMap = dartDefinesReader
+) async {
+  final dartDefineConfigJsonMap = await dartDefinesReader
       .extractDartDefineConfigJsonMap(dartDefineFromFilePaths);
 
   return mergeKeys(json: dartDefineConfigJsonMap, dartDefines: dartDefines);

@@ -6,6 +6,8 @@ import 'package:meta/meta.dart';
 import 'package:patrol/src/native/contracts/contracts.dart' as contracts;
 import 'package:patrol/src/native/contracts/contracts.dart';
 import 'package:patrol/src/native/contracts/native_automator_client.dart';
+import 'package:patrol/src/native/linux/linux_native_automator_client.dart'
+    if (dart.library.io) 'package:patrol/src/native/linux/linux_native_automator_client.dart';
 import 'package:patrol_log/patrol_log.dart';
 
 /// Thrown when a native action fails.
@@ -194,12 +196,24 @@ class NativeAutomator {
     // _config.logger('Android package name: ${_config.packageName}');
     // _config.logger('iOS bundle identifier: ${_config.bundleId}');
 
-    _client = NativeAutomatorClient(
-      http.Client(),
-      Uri.http('${_config.host}:${_config.port}'),
-      timeout: _config.connectionTimeout,
-    );
-    _config.logger('NativeAutomatorClient created, port: ${_config.port}');
+    // Use platform-specific client
+    if (io.Platform.isLinux) {
+      _client = LinuxNativeAutomatorClient(
+        http.Client(),
+        Uri.http('${_config.host}:${_config.port}'),
+        timeout: _config.connectionTimeout,
+      );
+      _config.logger(
+        'LinuxNativeAutomatorClient created, port: ${_config.port}',
+      );
+    } else {
+      _client = NativeAutomatorClient(
+        http.Client(),
+        Uri.http('${_config.host}:${_config.port}'),
+        timeout: _config.connectionTimeout,
+      );
+      _config.logger('NativeAutomatorClient created, port: ${_config.port}');
+    }
   }
 
   final _patrolLog = PatrolLogWriter();
@@ -213,6 +227,11 @@ class NativeAutomator {
       return _config.packageName;
     } else if (io.Platform.isIOS) {
       return _config.bundleId;
+    } else if (io.Platform.isLinux) {
+      // On Linux, use the app name or executable name
+      return _config.androidAppName.isNotEmpty
+          ? _config.androidAppName
+          : 'flutter_app'; // Default fallback
     }
 
     throw StateError('unsupported platform');

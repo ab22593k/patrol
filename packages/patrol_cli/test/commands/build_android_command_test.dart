@@ -71,22 +71,26 @@ void main() {
           excludes: any(named: 'excludes'),
           testFileSuffix: any(named: 'testFileSuffix'),
         ),
-      ).thenReturn(['integration_test/app_test.dart']);
+      ).thenAnswer((_) async => ['integration_test/app_test.dart']);
 
       when(() => mockTestBundler.bundledTestFile).thenReturn(
         MemoryFileSystem().file('integration_test/test_bundle.dart'),
       );
 
-      when(() => mockDartDefinesReader.fromFile()).thenReturn({});
+      when(
+        () => mockTestBundler.createTestBundle(any(), any(), any()),
+      ).thenAnswer((_) async {});
+
+      when(() => mockDartDefinesReader.fromFile()).thenAnswer((_) async => {});
       when(
         () => mockDartDefinesReader.fromCli(args: any(named: 'args')),
       ).thenReturn({});
       when(
         () => mockDartDefinesReader.extractDartDefineConfigJsonMap(any()),
-      ).thenReturn({});
+      ).thenAnswer((_) async => {});
 
-      when(() => mockPubspecReader.read()).thenReturn(
-        PatrolPubspecConfig(
+      when(() => mockPubspecReader.read()).thenAnswer(
+        (_) async => PatrolPubspecConfig(
           flutterPackageName: 'test_app',
           android: AndroidPubspecConfig(
             packageName: 'com.example.app',
@@ -96,6 +100,9 @@ void main() {
           macos: MacOSPubspecConfig.empty(),
         ),
       );
+      when(
+        () => mockPubspecReader.getPatrolVersion(),
+      ).thenAnswer((_) async => '1.0.0');
 
       when(() => mockAndroidTestBackend.build(any())).thenAnswer((_) async {});
 
@@ -186,8 +193,8 @@ void main() {
       test(
         'builds Android app with flavor from config when not provided',
         () async {
-          when(() => mockPubspecReader.read()).thenReturn(
-            PatrolPubspecConfig(
+          when(() => mockPubspecReader.read()).thenAnswer(
+            (_) async => PatrolPubspecConfig(
               flutterPackageName: 'test_app',
               android: AndroidPubspecConfig(
                 packageName: 'com.example.app',
@@ -262,6 +269,10 @@ void main() {
           () => mockDartDefinesReader.fromCli(args: any(named: 'args')),
         ).thenReturn({'CUSTOM_KEY': 'custom_value'});
 
+        when(
+          () => mockDartDefinesReader.fromFile(),
+        ).thenAnswer((_) async => {});
+
         final result = await runCommand([
           '--dart-define',
           'CUSTOM_KEY=custom_value',
@@ -308,10 +319,12 @@ void main() {
       });
 
       test('builds Android app with specific test targets', () async {
-        when(() => mockTestFinder.findTests(any(), any())).thenReturn([
-          'integration_test/specific_test.dart',
-          'integration_test/another_test.dart',
-        ]);
+        when(() => mockTestFinder.findTests(any(), any())).thenAnswer(
+          (_) async => [
+            'integration_test/specific_test.dart',
+            'integration_test/another_test.dart',
+          ],
+        );
 
         final result = await runCommand([
           '--target',
@@ -369,7 +382,9 @@ void main() {
       });
 
       test('runs compatibility check when enabled', () async {
-        when(() => mockPubspecReader.getPatrolVersion()).thenReturn('2.0.0');
+        when(
+          () => mockPubspecReader.getPatrolVersion(),
+        ).thenAnswer((_) async => '2.0.0');
 
         final result = await runCommand(['--check-compatibility']);
 
@@ -397,7 +412,7 @@ void main() {
       test('builds Android app with dart define from file', () async {
         when(
           () => mockDartDefinesReader.extractDartDefineConfigJsonMap(any()),
-        ).thenReturn({'FILE_KEY': 'file_value'});
+        ).thenAnswer((_) async => {'FILE_KEY': 'file_value'});
 
         final result = await runCommand([
           '--dart-define-from-file',

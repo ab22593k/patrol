@@ -13,11 +13,11 @@ class TestFinder {
   final Directory _integrationTestDirectory;
   final FileSystem _fs;
 
-  String findTest(
+  Future<String> findTest(
     String target, [
     String testFileSuffix = _kDefaultTestFileSuffix,
-  ]) {
-    final testFiles = findTests([target], testFileSuffix);
+  ]) async {
+    final testFiles = await findTests([target], testFileSuffix);
     if (testFiles.length > 1) {
       throwToolExit(
         'target $target is ambiguous, '
@@ -36,21 +36,21 @@ class TestFinder {
   ///
   ///  * is a path to a directory recursively containing at least one Dart test
   ///    file
-  List<String> findTests(
+  Future<List<String>> findTests(
     List<String> targets, [
     String testFileSuffix = _kDefaultTestFileSuffix,
-  ]) {
+  ]) async {
     final testFiles = <String>[];
 
     for (final target in targets) {
       if (target.endsWith(testFileSuffix)) {
-        final isFile = _fs.isFileSync(target);
+        final isFile = await _fs.file(target).exists();
         if (!isFile) {
           throwToolExit('target file $target does not exist');
         }
         testFiles.add(_fs.file(target).absolute.path);
-      } else if (_fs.isDirectorySync(target)) {
-        final foundTargets = findAllTests(
+      } else if (await _fs.directory(target).exists()) {
+        final foundTargets = await findAllTests(
           directory: _fs.directory(target),
           testFileSuffix: testFileSuffix,
         );
@@ -72,14 +72,14 @@ class TestFinder {
   /// Recursively searches the `integration_test` directory and returns files
   /// ending with defined [testFileSuffix]. If [testFileSuffix] is not defined,
   /// the default suffix `_test.dart` is used.
-  List<String> findAllTests({
+  Future<List<String>> findAllTests({
     Directory? directory,
     Set<String> excludes = const {},
     String testFileSuffix = _kDefaultTestFileSuffix,
-  }) {
+  }) async {
     directory ??= _integrationTestDirectory;
 
-    if (!directory.existsSync()) {
+    if (!await directory.exists()) {
       throwToolExit("Directory ${directory.path} doesn't exist");
     }
 
@@ -87,13 +87,16 @@ class TestFinder {
         .map((e) => _fs.file(e).absolute.path)
         .toSet();
 
-    return directory
-        .listSync(recursive: true, followLinks: false)
+    final files = await directory
+        .list(recursive: true, followLinks: false)
+        .toList();
+
+    return files
         .sorted((a, b) => a.path.compareTo(b.path))
         // Find only test files
         .where((fileSystemEntity) {
           final hasSuffix = fileSystemEntity.path.endsWith(testFileSuffix);
-          final isFile = _fs.isFileSync(fileSystemEntity.path);
+          final isFile = fileSystemEntity is File;
           return hasSuffix && isFile;
         })
         // Filter out excluded files

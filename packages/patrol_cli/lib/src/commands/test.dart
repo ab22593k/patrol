@@ -94,13 +94,13 @@ class TestCommand extends PatrolCommand {
       _analytics.sendCommand(FlutterVersion.fromCLI(flutterCommand), name),
     );
 
-    final config = _pubspecReader.read();
+    final config = await _pubspecReader.read();
     final testFileSuffix = config.testFileSuffix;
 
     final target = stringsArg('target');
     final targets = target.isNotEmpty
-        ? _testFinder.findTests(target, testFileSuffix)
-        : _testFinder.findAllTests(
+        ? await _testFinder.findTests(target, testFileSuffix)
+        : await _testFinder.findAllTests(
             excludes: stringsArg('exclude').toSet(),
             testFileSuffix: testFileSuffix,
           );
@@ -120,7 +120,7 @@ class TestCommand extends PatrolCommand {
     }
     final entrypoint = _testBundler.bundledTestFile;
     if (boolArg('generate-bundle')) {
-      _testBundler.createTestBundle(targets, tags, excludeTags);
+      await _testBundler.createTestBundle(targets, tags, excludeTags);
     }
 
     final androidFlavor = stringArg('flavor') ?? config.android.flavor;
@@ -183,7 +183,7 @@ See https://github.com/leancodepl/patrol/issues/1316 to learn more.
     final coveragePackagesRegExps = stringsArg('coverage-package');
 
     final customDartDefines = {
-      ..._dartDefinesReader.fromFile(),
+      ...await _dartDefinesReader.fromFile(),
       ..._dartDefinesReader.fromCli(args: stringsArg('dart-define')),
     };
     final internalDartDefines = {
@@ -216,7 +216,7 @@ See https://github.com/leancodepl/patrol/issues/1316 to learn more.
 
     final dartDefineFromFilePaths = stringsArg('dart-define-from-file');
 
-    final mergedDartDefines = mergeDartDefines(
+    final mergedDartDefines = await mergeDartDefines(
       dartDefineFromFilePaths,
       dartDefines,
       _dartDefinesReader,

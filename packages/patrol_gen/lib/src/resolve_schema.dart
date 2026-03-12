@@ -6,7 +6,7 @@ import 'package:patrol_gen/src/schema.dart';
 
 Future<Schema> resolveSchema(String schemaPath) async {
   final file = path.normalize(path.absolute(schemaPath));
-  final result = await resolveFile2(path: file);
+  final result = await resolveFile(path: file);
 
   final enums = <Enum>[];
   final messages = <Message>[];
@@ -67,16 +67,16 @@ Service _createService(ClassDeclaration declaration, List<Message> messages) {
     declaration.members.whereType<MethodDeclaration>().map((method) {
       final returnType = method.returnType;
       if (returnType is NamedType) {
-        final responseMessage = returnType.name2.lexeme == 'void'
+        final responseMessage = returnType.name.lexeme == 'void'
             ? null
-            : messages.firstWhere((msg) => msg.name == returnType.name2.lexeme);
+            : messages.firstWhere((msg) => msg.name == returnType.name.lexeme);
 
         Message? requestMessage;
         if (method.parameters!.parameters.isNotEmpty) {
           final parameter = method.parameters!.parameters.first;
           if (parameter is SimpleFormalParameter) {
             final parameterTypeName =
-                (parameter.type! as NamedType).name2.lexeme;
+                (parameter.type! as NamedType).name.lexeme;
 
             requestMessage =
                 messages.firstWhere((msg) => msg.name == parameterTypeName);
@@ -112,8 +112,8 @@ Message _createMessage(ClassDeclaration declaration) {
             isOptional: isOptional,
             name: fieldName,
             type: MapFieldType(
-              keyType: (arguments[0] as NamedType).name2.lexeme,
-              valueType: (arguments[1] as NamedType).name2.lexeme,
+              keyType: (arguments[0] as NamedType).name.lexeme,
+              valueType: (arguments[1] as NamedType).name.lexeme,
             ),
           );
         } else if (type.type?.isDartCoreList ?? false) {
@@ -121,13 +121,13 @@ Message _createMessage(ClassDeclaration declaration) {
           return MessageField(
             isOptional: isOptional,
             name: fieldName,
-            type: ListFieldType(type: genericType.name2.lexeme),
+            type: ListFieldType(type: genericType.name.lexeme),
           );
         } else {
           return MessageField(
             isOptional: isOptional,
             name: fieldName,
-            type: OrdinaryFieldType(type: type.name2.lexeme),
+            type: OrdinaryFieldType(type: type.name.lexeme),
           );
         }
       } else {

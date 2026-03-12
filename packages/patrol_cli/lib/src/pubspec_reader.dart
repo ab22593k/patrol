@@ -83,15 +83,15 @@ class PubspecReader {
   final FileSystem _fs;
 
   /// Gets the patrol package version from pubspec.yaml dependencies
-  String? getPatrolVersion() {
+  Future<String?> getPatrolVersion() async {
     final filePath = _fs.path.join(_projectRoot.path, 'pubspec.yaml');
     final file = _fs.file(filePath);
 
-    if (!file.existsSync()) {
+    if (!await file.exists()) {
       return null;
     }
 
-    final contents = file.readAsStringSync();
+    final contents = await file.readAsString();
     if (contents.isEmpty) {
       return null;
     }
@@ -136,15 +136,15 @@ class PubspecReader {
     }
   }
 
-  PatrolPubspecConfig read() {
+  Future<PatrolPubspecConfig> read() async {
     final filePath = _fs.path.join(_projectRoot.path, 'pubspec.yaml');
     final file = _fs.file(filePath);
 
-    if (!file.existsSync()) {
+    if (!await file.exists()) {
       throw FileSystemException("pubspec.yaml doesn't exist", filePath);
     }
 
-    final contents = file.readAsStringSync();
+    final contents = await file.readAsString();
     final yaml = loadYaml(contents) as Map;
 
     final androidConfig = AndroidPubspecConfig();

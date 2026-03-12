@@ -72,7 +72,7 @@ void main(List<String> args) async {
   process.stdout
       .transform(utf8.decoder)
       .transform(const LineSplitter())
-      .listen((data) async {
+      .listen((data) {
     print('[patrol develop] $data');
     output.write(data);
     final stringOutput = output.toString();

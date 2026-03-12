@@ -34,16 +34,16 @@ void _test(Platform platform) {
     });
 
     group('read()', () {
-      test('returns empty config when `patrol` block does not exist', () {
+      test('returns empty config when `patrol` block does not exist', () async {
         fs.file('pubspec.yaml').writeAsStringSync(_pubspecBase);
 
         expect(
-          reader.read(),
+          await reader.read(),
           equals(PatrolPubspecConfig.empty(flutterPackageName: 'example')),
         );
       });
 
-      test('reads top-level arguments', () {
+      test('reads top-level arguments', () async {
         fs.file('pubspec.yaml').writeAsStringSync('''
 $_pubspecBase
 patrol:
@@ -51,13 +51,14 @@ patrol:
   flavor: dev
 ''');
 
-        expect(reader.read().android.appName, equals('Example'));
-        expect(reader.read().ios.appName, equals('Example'));
-        expect(reader.read().android.flavor, equals('dev'));
-        expect(reader.read().ios.flavor, equals('dev'));
+        final config = await reader.read();
+        expect(config.android.appName, equals('Example'));
+        expect(config.ios.appName, equals('Example'));
+        expect(config.android.flavor, equals('dev'));
+        expect(config.ios.flavor, equals('dev'));
       });
 
-      test('reads `android` block', () {
+      test('reads `android` block', () async {
         fs.file('pubspec.yaml').writeAsStringSync('''
 $_pubspecBase
 patrol:
@@ -66,11 +67,12 @@ patrol:
     package_name: com.example.app
 ''');
 
-        expect(reader.read().android.appName, equals('Example'));
-        expect(reader.read().android.packageName, equals('com.example.app'));
+        final config = await reader.read();
+        expect(config.android.appName, equals('Example'));
+        expect(config.android.packageName, equals('com.example.app'));
       });
 
-      test('reads `ios` block', () {
+      test('reads `ios` block', () async {
         fs.file('pubspec.yaml').writeAsStringSync('''
 $_pubspecBase
 patrol:
@@ -79,11 +81,12 @@ patrol:
     bundle_id: com.example.ExampleApp
 ''');
 
-        expect(reader.read().ios.appName, equals('The Example'));
-        expect(reader.read().ios.bundleId, equals('com.example.ExampleApp'));
+        final config = await reader.read();
+        expect(config.ios.appName, equals('The Example'));
+        expect(config.ios.bundleId, equals('com.example.ExampleApp'));
       });
 
-      test('overrides global values with platform-specific ones', () {
+      test('overrides global values with platform-specific ones', () async {
         fs.file('pubspec.yaml').writeAsStringSync('''
 $_pubspecBase
 patrol:
@@ -98,12 +101,13 @@ patrol:
     flavor: devApple
 ''');
 
-        expect(reader.read().android.appName, equals('Example'));
-        expect(reader.read().android.packageName, equals('com.example.app'));
-        expect(reader.read().android.flavor, equals('devAndroid'));
-        expect(reader.read().ios.appName, equals('The Example'));
-        expect(reader.read().ios.bundleId, equals('com.example.ExampleApp'));
-        expect(reader.read().ios.flavor, equals('devApple'));
+        final config = await reader.read();
+        expect(config.android.appName, equals('Example'));
+        expect(config.android.packageName, equals('com.example.app'));
+        expect(config.android.flavor, equals('devAndroid'));
+        expect(config.ios.appName, equals('The Example'));
+        expect(config.ios.bundleId, equals('com.example.ExampleApp'));
+        expect(config.ios.flavor, equals('devApple'));
       });
     });
   });

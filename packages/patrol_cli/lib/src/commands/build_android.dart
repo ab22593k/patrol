@@ -79,12 +79,12 @@ class BuildAndroidCommand extends PatrolCommand {
       ),
     );
 
-    final config = _pubspecReader.read();
+    final config = await _pubspecReader.read();
     final testFileSuffix = config.testFileSuffix;
 
     // Check compatibility between CLI and package versions
     if (boolArg('check-compatibility')) {
-      final patrolVersion = _pubspecReader.getPatrolVersion();
+      final patrolVersion = await _pubspecReader.getPatrolVersion();
       await _compatibilityChecker.checkVersionsCompatibilityForBuild(
         patrolVersion: patrolVersion,
       );
@@ -92,8 +92,8 @@ class BuildAndroidCommand extends PatrolCommand {
 
     final target = stringsArg('target');
     final targets = target.isNotEmpty
-        ? _testFinder.findTests(target, testFileSuffix)
-        : _testFinder.findAllTests(
+        ? await _testFinder.findTests(target, testFileSuffix)
+        : await _testFinder.findAllTests(
             excludes: stringsArg('exclude').toSet(),
             testFileSuffix: testFileSuffix,
           );
@@ -113,7 +113,7 @@ class BuildAndroidCommand extends PatrolCommand {
     }
     final entrypoint = _testBundler.bundledTestFile;
     if (boolArg('generate-bundle')) {
-      _testBundler.createTestBundle(targets, tags, excludeTags);
+      await _testBundler.createTestBundle(targets, tags, excludeTags);
     }
 
     final flavor = stringArg('flavor') ?? config.android.flavor;
@@ -137,7 +137,7 @@ class BuildAndroidCommand extends PatrolCommand {
     final uninstall = boolArg('uninstall');
 
     final customDartDefines = {
-      ..._dartDefinesReader.fromFile(),
+      ...await _dartDefinesReader.fromFile(),
       ..._dartDefinesReader.fromCli(args: stringsArg('dart-define')),
     };
     final internalDartDefines = {
@@ -164,7 +164,7 @@ class BuildAndroidCommand extends PatrolCommand {
 
     final dartDefineFromFilePaths = stringsArg('dart-define-from-file');
 
-    final mergedDartDefines = mergeDartDefines(
+    final mergedDartDefines = await mergeDartDefines(
       dartDefineFromFilePaths,
       dartDefines,
       _dartDefinesReader,

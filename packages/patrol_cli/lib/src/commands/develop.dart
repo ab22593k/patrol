@@ -103,9 +103,12 @@ class DevelopCommand extends PatrolCommand {
       throwToolExit('Only one target can be provided with --target');
     }
 
-    final config = _pubspecReader.read();
+    final config = await _pubspecReader.read();
 
-    final target = _testFinder.findTest(targets.first, config.testFileSuffix);
+    final target = await _testFinder.findTest(
+      targets.first,
+      config.testFileSuffix,
+    );
     _logger.detail('Received test target: $target');
 
     if (boolArg('release')) {
@@ -114,7 +117,7 @@ class DevelopCommand extends PatrolCommand {
 
     final entrypoint = _testBundler.bundledTestFile;
     if (boolArg('generate-bundle')) {
-      _testBundler.createDevelopTestBundle(target);
+      await _testBundler.createDevelopTestBundle(target);
     }
 
     final androidFlavor = stringArg('flavor') ?? config.android.flavor;
@@ -170,7 +173,7 @@ class DevelopCommand extends PatrolCommand {
     }
 
     final customDartDefines = {
-      ..._dartDefinesReader.fromFile(),
+      ...await _dartDefinesReader.fromFile(),
       ..._dartDefinesReader.fromCli(args: stringsArg('dart-define')),
     };
     final internalDartDefines = {
@@ -206,7 +209,7 @@ class DevelopCommand extends PatrolCommand {
 
     final dartDefineFromFilePaths = stringsArg('dart-define-from-file');
 
-    final mergedDartDefines = mergeDartDefines(
+    final mergedDartDefines = await mergeDartDefines(
       dartDefineFromFilePaths,
       dartDefines,
       _dartDefinesReader,

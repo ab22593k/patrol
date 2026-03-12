@@ -3,6 +3,7 @@ import 'package:path/path.dart' as path;
 import 'package:patrol_gen/src/generators/dart/dart_config.dart';
 import 'package:patrol_gen/src/generators/output_file.dart';
 import 'package:patrol_gen/src/schema.dart';
+import 'package:pub_semver/pub_semver.dart';
 
 class DartShelfServerGenerator {
   OutputFile generate(Service service, DartConfig config) {
@@ -15,7 +16,8 @@ class DartShelfServerGenerator {
 
     return OutputFile(
       filename: config.serviceFileName(service.name),
-      content: DartFormatter().format(buffer.toString()),
+      content: DartFormatter(languageVersion: Version(3, 0, 0))
+          .format(buffer.toString()),
     );
   }
 

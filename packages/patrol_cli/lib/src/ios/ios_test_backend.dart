@@ -246,44 +246,42 @@ class IOSTestBackend {
     required String? flavor,
     required Device device,
   }) async {
-    if (device.real) {
-      // uninstall from iOS device
-      await _processManager.run([
-        'ideviceinstaller',
-        ...['--udid', device.id],
-        ...['--uninstall', appId],
-      ], runInShell: true);
-    } else {
-      // uninstall from iOS simulator
-      await _processManager.run([
-        'xcrun',
-        'simctl',
-        'uninstall',
-        device.id,
-        appId,
-      ], runInShell: true);
-    }
-
     // See rationale: https://github.com/leancodepl/patrol/issues/1094
     final appIdWithoutFlavor = stripFlavorFromAppId(appId, flavor);
     final testApp = '$appIdWithoutFlavor.RunnerUITests.xctrunner';
 
     if (device.real) {
       // uninstall from iOS device
-      await _processManager.run([
-        'ideviceinstaller',
-        ...['--udid', device.id],
-        ...['--uninstall', testApp],
-      ], runInShell: true);
+      await Future.wait([
+        _processManager.run([
+          'ideviceinstaller',
+          ...['--udid', device.id],
+          ...['--uninstall', appId],
+        ], runInShell: true),
+        _processManager.run([
+          'ideviceinstaller',
+          ...['--udid', device.id],
+          ...['--uninstall', testApp],
+        ], runInShell: true),
+      ]);
     } else {
       // uninstall from iOS simulator
-      await _processManager.run([
-        'xcrun',
-        'simctl',
-        'uninstall',
-        device.id,
-        testApp,
-      ], runInShell: true);
+      await Future.wait([
+        _processManager.run([
+          'xcrun',
+          'simctl',
+          'uninstall',
+          device.id,
+          appId,
+        ], runInShell: true),
+        _processManager.run([
+          'xcrun',
+          'simctl',
+          'uninstall',
+          device.id,
+          testApp,
+        ], runInShell: true),
+      ]);
     }
   }
 

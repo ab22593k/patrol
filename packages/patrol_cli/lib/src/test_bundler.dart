@@ -13,11 +13,11 @@ class TestBundler {
   final Logger _logger;
 
   /// Creates an entrypoint for use with `patrol test` and `patrol build`.
-  void createTestBundle(
+  Future<void> createTestBundle(
     List<String> testFilePaths,
     String? tags,
     String? excludeTags,
-  ) {
+  ) async {
     if (testFilePaths.isEmpty) {
       throw ArgumentError('testFilePaths must not be empty');
     }
@@ -114,9 +114,8 @@ ${generateGroupsCode(testFilePaths).split('\n').map((e) => '  $e').join('\n')}
 
     // This file must not end with "_test.dart", otherwise it'll be picked up
     // when finding tests to bundle.
-    bundledTestFile
-      ..createSync(recursive: true)
-      ..writeAsStringSync(contents);
+    await bundledTestFile.create(recursive: true);
+    await bundledTestFile.writeAsString(contents);
 
     _logger.detail(
       'Generated entrypoint ${bundledTestFile.path} with ${testFilePaths.length} bundled test(s)',
@@ -130,7 +129,7 @@ ${generateGroupsCode(testFilePaths).split('\n').map((e) => '  $e').join('\n')}
       .childFile('test_bundle.dart');
 
   /// Creates an entrypoint for use with `patrol develop`.
-  void createDevelopTestBundle(String testFilePath) {
+  Future<void> createDevelopTestBundle(String testFilePath) async {
     final contents =
         '''
 // ignore_for_file: type=lint, invalid_use_of_internal_member
@@ -156,9 +155,8 @@ ${generateGroupsCode([testFilePath]).split('\n').map((e) => '  $e').join('\n')}
 }
 ''';
 
-    bundledTestFile
-      ..createSync(recursive: true)
-      ..writeAsStringSync(contents);
+    await bundledTestFile.create(recursive: true);
+    await bundledTestFile.writeAsString(contents);
 
     _logger.detail(
       'Generated entrypoint ${bundledTestFile.path} for development',
