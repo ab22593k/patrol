@@ -368,7 +368,7 @@ class LinuxNativeAutomatorClient extends NativeAutomatorClient {
         if (views.nativeViews.isNotEmpty) {
           return;
         }
-      } catch (e) {
+      } catch (err) {
         // Continue polling
       }
       await Future<void>.delayed(const Duration(milliseconds: 500));

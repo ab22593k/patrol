@@ -149,18 +149,38 @@ ElevatedButton(
 1. **"Failed to connect to desktop"**
    - Ensure accessibility is enabled: `gsettings set org.gnome.desktop.interface toolkit-accessibility true`
    - Restart your session after enabling accessibility
+   - Check if AT-SPI is running: `ps aux | grep at-spi`
 
 2. **"xdotool not found"**
    - Install xdotool: `sudo apt install xdotool` (Ubuntu/Debian)
+   - Or: `sudo dnf install xdotool` (Fedora)
+   - Or: `sudo pacman -S xdotool` (Arch Linux)
 
 3. **"Element not found"**
    - Verify the target application has accessibility support
    - Check that the application is running and visible
    - Use AT-SPI inspection tools to verify element properties
+   - Try running the application with `GTK_ACCESSIBILITY=1` environment variable
 
 4. **"Permission denied"**
    - Ensure the service has permission to control applications
    - Check firewall settings if running remotely
+   - Make sure you're running as the same user as the target application
+
+5. **"Service not responding"**
+   - Check if the Python service is running: `curl http://localhost:8081/initialize`
+   - Verify port 8081 is not in use by another service
+   - Check Python service logs for errors
+
+6. **"Tests fail on headless environments"**
+   - Some operations require a display server
+   - Use Xvfb for headless testing: `Xvfb :99 -screen 0 1024x768x24 &`
+   - Set display: `export DISPLAY=:99`
+
+7. **"Methods throw UnimplementedError"**
+   - This is expected for mobile-specific features
+   - These methods now log warnings instead of throwing
+   - Check stderr output for warning messages
 
 ### Debugging Tools
 

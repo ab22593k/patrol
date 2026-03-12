@@ -14,6 +14,8 @@ concise and understandable, and writing them – faster and more fun. It you wan
 to only use custom finders, check out
 [patrol_finders](https://pub.dev/packages/patrol_finders).
 
+**Supported platforms:** Android, iOS, macOS, Linux (preview), Web (via patrol_cli).
+
 ## Installation
 
 ```console

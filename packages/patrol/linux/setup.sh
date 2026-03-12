@@ -40,9 +40,9 @@ elif command -v dnf &> /dev/null; then
         xdotool \
         at-spi2-core \
         at-spi2-atk-devel \
-        pyatspi2 \
         python3-gobject \
-        gtk3
+        gtk3 \
+        --skip-unavailable
 
 # Check for pacman (Arch)
 elif command -v pacman &> /dev/null; then

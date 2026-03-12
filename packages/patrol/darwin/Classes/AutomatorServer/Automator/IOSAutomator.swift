@@ -762,7 +762,35 @@
           .allElementsBoundByIndex
         for (i, cell) in cells.enumerated() {
           Logger.shared.i("found notification at index \(i) with label \(format: cell.label)")
-          let notification = Notification(title: String(), content: String(), raw: cell.label)
+          
+          // Parse the notification label to extract title and content
+          // iOS notification labels typically have format: "App Name\nTitle\nContent"
+          // or "Title\nContent" depending on iOS version
+          let labelComponents = cell.label.components(separatedBy: .newlines)
+          var appName: String? = nil
+          var title = ""
+          var content = ""
+          
+          if labelComponents.count >= 3 {
+            // Format: App Name\nTitle\nContent
+            appName = labelComponents[0].trimmingCharacters(in: .whitespaces)
+            title = labelComponents[1].trimmingCharacters(in: .whitespaces)
+            content = labelComponents.dropFirst(2).joined(separator: "\n").trimmingCharacters(in: .whitespaces)
+          } else if labelComponents.count == 2 {
+            // Format: Title\nContent
+            title = labelComponents[0].trimmingCharacters(in: .whitespaces)
+            content = labelComponents[1].trimmingCharacters(in: .whitespaces)
+          } else if labelComponents.count == 1 {
+            // Format: Just content (rare case)
+            content = labelComponents[0].trimmingCharacters(in: .whitespaces)
+          }
+          
+          let notification = Notification(
+            appName: appName,
+            title: title,
+            content: content,
+            raw: cell.label
+          )
           notifications.append(notification)
         }
       }
