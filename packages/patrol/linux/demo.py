@@ -7,8 +7,6 @@ to interact with desktop applications.
 """
 
 import requests
-import json
-import time
 import sys
 
 # Service configuration

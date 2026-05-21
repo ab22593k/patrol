@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:patrol/src/native/contracts/contracts.dart';
 import 'package:patrol/src/native/contracts/native_automator_client.dart';
+import 'package:patrol/src/native/linux/wayland_native_automator_client.dart'
+    show WaylandNativeAutomatorClient;
 
 /// Linux-specific implementation of NativeAutomatorClient
 /// Linux implementation of the NativeAutomatorClient.
@@ -583,33 +585,24 @@ class LinuxNativeAutomatorClient extends NativeAutomatorClient {
     );
   }
 
-  /// Checks XDG_SESSION_TYPE and warns if running on Wayland.
-  /// Only emits the warning once (on the first call) to avoid noise.
+  /// Checks XDG_SESSION_TYPE and logs an informational message if running
+  /// under Wayland (the [WaylandNativeAutomatorClient] handles this case).
+  /// Only emits the message once to avoid noise.
   void _warnIfWayland() {
-    if (_waylandWarningEmitted) return;
-    _waylandWarningEmitted = true;
+    if (_waylandNoted) return;
+    _waylandNoted = true;
 
     final sessionType = Platform.environment['XDG_SESSION_TYPE'];
     if (sessionType != null && sessionType.toLowerCase() == 'wayland') {
-      stderr.writeln();
-      stderr.writeln('=' * 70);
       stderr.writeln(
-        'WARNING: XDG_SESSION_TYPE is "wayland". The Linux native automator',
+        'Patrol (Linux): XDG_SESSION_TYPE is "wayland". '
+        'LinuxNativeAutomatorClient (xdotool) is active; '
+        'use WaylandNativeAutomatorClient for ydotool support.',
       );
-      stderr.writeln(
-        'uses xdotool, which only works on X11. Click, type, key, and swipe',
-      );
-      stderr.writeln('operations will likely fail. To resolve this, either:');
-      stderr.writeln(
-        '  1. Log in to an X11 session (select "X11" at the login screen)',
-      );
-      stderr.writeln('  2. Set XDG_SESSION_TYPE=x11 before running your tests');
-      stderr.writeln('=' * 70);
-      stderr.writeln();
     }
   }
 
-  static var _waylandWarningEmitted = false;
+  static var _waylandNoted = false;
 
   @override
   Future<void> configure(ConfigureRequest request) async {
