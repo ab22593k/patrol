@@ -15,6 +15,9 @@ workspace:
 dev_dependencies:
   melos: ^7.0.0
 
+  flutter_test: any
+  patrol: any
+  test_api: any
 melos:
   repository: https://github.com/leancodepl/patrol
 

@@ -13,74 +13,74 @@ void main() {
   });
 
   group('getPatrolVersion', () {
-    test('returns null when pubspec.yaml does not exist', () {
-      expect(reader.getPatrolVersion(), isNull);
+    test('returns null when pubspec.yaml does not exist', () async {
+      expect(await reader.getPatrolVersion(), isNull);
     });
 
-    test('returns null when dependencies section is missing', () {
+    test('returns null when dependencies section is missing', () async {
       fs.file('/project/pubspec.yaml').writeAsStringSync('''
 name: test_project
 ''');
-      expect(reader.getPatrolVersion(), isNull);
+      expect(await reader.getPatrolVersion(), isNull);
     });
 
-    test('returns null when patrol dependency is missing', () {
+    test('returns null when patrol dependency is missing', () async {
       fs.file('/project/pubspec.yaml').writeAsStringSync('''
 name: test_project
 dependencies:
   flutter:
     sdk: flutter
 ''');
-      expect(reader.getPatrolVersion(), isNull);
+      expect(await reader.getPatrolVersion(), isNull);
     });
 
-    test('handles direct version string with caret', () {
+    test('handles direct version string with caret', () async {
       fs.file('/project/pubspec.yaml').writeAsStringSync('''
 name: test_project
 dependencies:
   patrol: ^3.15.0
 ''');
-      expect(reader.getPatrolVersion(), equals('3.15.0'));
+      expect(await reader.getPatrolVersion(), equals('3.15.0'));
     });
 
-    test('handles direct version string with tilde', () {
+    test('handles direct version string with tilde', () async {
       fs.file('/project/pubspec.yaml').writeAsStringSync('''
 name: test_project
 dependencies:
   patrol: ~3.15.0
 ''');
-      expect(reader.getPatrolVersion(), equals('3.15.0'));
+      expect(await reader.getPatrolVersion(), equals('3.15.0'));
     });
 
-    test('handles direct version string with dev version', () {
+    test('handles direct version string with dev version', () async {
       fs.file('/project/pubspec.yaml').writeAsStringSync('''
 name: test_project
 dependencies:
   patrol: 3.15.1-dev.1
 ''');
-      expect(reader.getPatrolVersion(), equals('3.15.1-dev.1'));
+      expect(await reader.getPatrolVersion(), equals('3.15.1-dev.1'));
     });
 
-    test('handles direct version string with build number', () {
+    test('handles direct version string with build number', () async {
       fs.file('/project/pubspec.yaml').writeAsStringSync('''
 name: test_project
 dependencies:
   patrol: 3.15.1+1
 ''');
-      expect(reader.getPatrolVersion(), equals('3.15.1+1'));
+      expect(await reader.getPatrolVersion(), equals('3.15.1+1'));
     });
 
-    test('handles hosted dependency with version', () {
+    test('handles hosted dependency with version', () async {
       fs.file('/project/pubspec.yaml').writeAsStringSync('''
 name: test_project
 dependencies:
   patrol:
     version: ^3.15.0
 ''');
-      expect(reader.getPatrolVersion(), equals('3.15.0'));
+      expect(await reader.getPatrolVersion(), equals('3.15.0'));
     });
 
-    test('handles git dependency with ref', () {
+    test('handles git dependency with ref', () async {
       fs.file('/project/pubspec.yaml').writeAsStringSync('''
 name: test_project
 dependencies:
@@ -89,10 +89,10 @@ dependencies:
       url: https://github.com/leancodepl/patrol.git
       ref: 3.15.1
 ''');
-      expect(reader.getPatrolVersion(), equals('3.15.1'));
+      expect(await reader.getPatrolVersion(), equals('3.15.1'));
     });
 
-    test('handles git dependency with dev ref', () {
+    test('handles git dependency with dev ref', () async {
       fs.file('/project/pubspec.yaml').writeAsStringSync('''
 name: test_project
 dependencies:
@@ -101,10 +101,10 @@ dependencies:
       url: https://github.com/leancodepl/patrol.git
       ref: 3.15.1-dev.1
 ''');
-      expect(reader.getPatrolVersion(), equals('3.15.1-dev.1'));
+      expect(await reader.getPatrolVersion(), equals('3.15.1-dev.1'));
     });
 
-    test('handles git dependency with path', () {
+    test('handles git dependency with path', () async {
       fs.file('/project/pubspec.yaml').writeAsStringSync('''
 name: test_project
 dependencies:
@@ -113,10 +113,10 @@ dependencies:
       url: https://github.com/leancodepl/patrol.git
       path: packages/patrol
 ''');
-      expect(reader.getPatrolVersion(), isNull);
+      expect(await reader.getPatrolVersion(), isNull);
     });
 
-    test('handles git dependency with branch', () {
+    test('handles git dependency with branch', () async {
       fs.file('/project/pubspec.yaml').writeAsStringSync('''
 name: test_project
 dependencies:
@@ -125,52 +125,52 @@ dependencies:
       url: https://github.com/leancodepl/patrol.git
       branch: main
 ''');
-      expect(reader.getPatrolVersion(), isNull);
+      expect(await reader.getPatrolVersion(), isNull);
     });
 
-    test('handles hosted dependency with any', () {
+    test('handles hosted dependency with any', () async {
       fs.file('/project/pubspec.yaml').writeAsStringSync('''
 name: test_project
 dependencies:
   patrol: any
 ''');
-      expect(reader.getPatrolVersion(), equals('any'));
+      expect(await reader.getPatrolVersion(), equals('any'));
     });
 
-    test('handles hosted dependency with empty version', () {
+    test('handles hosted dependency with empty version', () async {
       fs.file('/project/pubspec.yaml').writeAsStringSync('''
 name: test_project
 dependencies:
   patrol:
     version: ''
 ''');
-      expect(reader.getPatrolVersion(), equals(''));
+      expect(await reader.getPatrolVersion(), equals(''));
     });
 
-    test('handles malformed yaml', () {
+    test('handles malformed yaml', () async {
       fs.file('/project/pubspec.yaml').writeAsStringSync('''
 name: test_project
 dependencies:
   patrol: invalid: yaml
 ''');
-      expect(reader.getPatrolVersion(), isNull);
+      expect(await reader.getPatrolVersion(), isNull);
     });
 
-    test('handles empty pubspec.yaml', () {
+    test('handles empty pubspec.yaml', () async {
       fs.file('/project/pubspec.yaml').writeAsStringSync('');
-      expect(reader.getPatrolVersion(), isNull);
+      expect(await reader.getPatrolVersion(), isNull);
     });
 
-    test('handles patrol in dev_dependencies', () {
+    test('handles patrol in dev_dependencies', () async {
       fs.file('/project/pubspec.yaml').writeAsStringSync('''
 name: test_project
 dev_dependencies:
   patrol: ^3.15.0
 ''');
-      expect(reader.getPatrolVersion(), equals('3.15.0'));
+      expect(await reader.getPatrolVersion(), equals('3.15.0'));
     });
 
-    test('handles patrol in both dependencies and dev_dependencies', () {
+    test('handles patrol in both dependencies and dev_dependencies', () async {
       fs.file('/project/pubspec.yaml').writeAsStringSync('''
 name: test_project
 dependencies:
@@ -178,10 +178,10 @@ dependencies:
 dev_dependencies:
   patrol: ^3.15.0
 ''');
-      expect(reader.getPatrolVersion(), equals('3.14.0'));
+      expect(await reader.getPatrolVersion(), equals('3.14.0'));
     });
 
-    test('handles git dependency with commit hash', () {
+    test('handles git dependency with commit hash', () async {
       fs.file('/project/pubspec.yaml').writeAsStringSync('''
 name: test_project
 dependencies:
@@ -190,38 +190,38 @@ dependencies:
       url: https://github.com/leancodepl/patrol.git
       ref: a1b2c3d4
 ''');
-      expect(reader.getPatrolVersion(), equals('a1b2c3d4'));
+      expect(await reader.getPatrolVersion(), equals('a1b2c3d4'));
     });
 
-    test('handles path dependency', () {
+    test('handles path dependency', () async {
       fs.file('/project/pubspec.yaml').writeAsStringSync('''
 name: test_project
 dependencies:
   patrol:
     path: ../patrol
 ''');
-      expect(reader.getPatrolVersion(), isNull);
+      expect(await reader.getPatrolVersion(), isNull);
     });
 
-    test('handles hosted dependency with complex version constraint', () {
+    test('handles hosted dependency with complex version constraint', () async {
       fs.file('/project/pubspec.yaml').writeAsStringSync('''
 name: test_project
 dependencies:
   patrol: ">=3.15.0 <4.0.0"
 ''');
-      expect(reader.getPatrolVersion(), equals('>=3.15.0 <4.0.0'));
+      expect(await reader.getPatrolVersion(), equals('>=3.15.0 <4.0.0'));
     });
 
-    test('handles hosted dependency with exact version', () {
+    test('handles hosted dependency with exact version', () async {
       fs.file('/project/pubspec.yaml').writeAsStringSync('''
 name: test_project
 dependencies:
   patrol: "3.15.0"
 ''');
-      expect(reader.getPatrolVersion(), equals('3.15.0'));
+      expect(await reader.getPatrolVersion(), equals('3.15.0'));
     });
 
-    test('handles git dependency with tag', () {
+    test('handles git dependency with tag', () async {
       fs.file('/project/pubspec.yaml').writeAsStringSync('''
 name: test_project
 dependencies:
@@ -230,26 +230,26 @@ dependencies:
       url: https://github.com/leancodepl/patrol.git
       ref: v3.15.0
 ''');
-      expect(reader.getPatrolVersion(), equals('v3.15.0'));
+      expect(await reader.getPatrolVersion(), equals('v3.15.0'));
     });
 
-    test('handles hosted dependency with sdk constraint', () {
+    test('handles hosted dependency with sdk constraint', () async {
       fs.file('/project/pubspec.yaml').writeAsStringSync('''
 name: test_project
 dependencies:
   patrol:
     sdk: ">=2.12.0 <3.0.0"
 ''');
-      expect(reader.getPatrolVersion(), isNull);
+      expect(await reader.getPatrolVersion(), isNull);
     });
 
-    test('handles non-string yaml values', () {
+    test('handles non-string yaml values', () async {
       fs.file('/project/pubspec.yaml').writeAsStringSync('''
 name: test_project
 dependencies:
   patrol: 123
 ''');
-      expect(reader.getPatrolVersion(), equals('123'));
+      expect(await reader.getPatrolVersion(), equals('123'));
     });
   });
 }

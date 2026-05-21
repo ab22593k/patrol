@@ -12,7 +12,7 @@ import 'package:patrol/patrol.dart';
 void main() {
   group('Linux Native Automator API', () {
     test('NativeAutomatorConfig can be created on Linux', () {
-      const config = NativeAutomatorConfig(host: 'localhost', port: '8081');
+      const config = NativeAutomatorConfig();
       expect(config.host, equals('localhost'));
       expect(config.port, equals('8081'));
     });
@@ -21,7 +21,7 @@ void main() {
       if (!io.Platform.isLinux) {
         return;
       }
-      const config = NativeAutomatorConfig(host: 'localhost', port: '8081');
+      const config = NativeAutomatorConfig();
       final automator = NativeAutomator(config: config);
       expect(automator, isNotNull);
     });
@@ -31,8 +31,6 @@ void main() {
         return;
       }
       const config = NativeAutomatorConfig(
-        host: 'localhost',
-        port: '8081',
         packageName: 'test.app',
       );
       final automator = NativeAutomator(config: config);

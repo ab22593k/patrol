@@ -11,6 +11,7 @@ import 'package:test_api/src/backend/invoker.dart';
 // START: GENERATED TEST IMPORTS
 import '../packages/patrol/example/integration_test/main_test.dart'
     as home__abdelwahab__azul__dart__patrol__packages__patrol__example__main_test;
+
 // END: GENERATED TEST IMPORTS
 
 Future<void> main() async {

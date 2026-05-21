@@ -27,7 +27,7 @@ void _test(Platform platform) {
     });
 
     group('fromCli()', () {
-      test('reads correct simple input', () {
+      test('reads correct simple input', () async {
         final args = ['EMAIL=email@example.com', 'PASSWORD=ny4ncat'];
 
         expect(
@@ -36,7 +36,7 @@ void _test(Platform platform) {
         );
       });
 
-      test('reads correct complex input', () {
+      test('reads correct complex input', () async {
         final args = [
           'EMAIL=email@wrong=domain.com',
           r'PASSWORD="ny4ncat\n"',
@@ -61,61 +61,61 @@ void _test(Platform platform) {
         file = fs.file('.patrol.env');
       });
 
-      test('reads correct simple input', () {
+      test('reads correct simple input', () async {
         file.writeAsString('EMAIL=email@example.com\nPASSWORD=ny4ncat\n');
 
         expect(
-          reader.fromFile(),
+          await reader.fromFile(),
           equals({'EMAIL': 'email@example.com', 'PASSWORD': 'ny4ncat'}),
         );
       });
 
-      test('reads correct simple input with empty lines', () {
+      test('reads correct simple input with empty lines', () async {
         file.writeAsString('EMAIL=email@example.com\n\nPASSWORD=ny4ncat\n');
 
         expect(
-          reader.fromFile(),
+          await reader.fromFile(),
           equals({'EMAIL': 'email@example.com', 'PASSWORD': 'ny4ncat'}),
         );
       });
-      test('reads correct simple input with comment on own line', () {
+      test('reads correct simple input with comment on own line', () async {
         file.writeAsString(
           'EMAIL=email@example.com\n#The password for the API\nPASSWORD=ny4ncat\n',
         );
 
         expect(
-          reader.fromFile(),
+          await reader.fromFile(),
           equals({'EMAIL': 'email@example.com', 'PASSWORD': 'ny4ncat'}),
         );
       });
       test(
         'reads correct simple input with comment on same line as variable',
-        () {
+        () async {
           file.writeAsString(
             ' EMAIL=email@example.com  \nPASSWORD=ny4ncat # The password for the API\n',
           );
 
           expect(
-            reader.fromFile(),
+            await reader.fromFile(),
             equals({'EMAIL': 'email@example.com', 'PASSWORD': 'ny4ncat'}),
           );
         },
       );
-      test('reads correct simple input with commented out variable', () {
+      test('reads correct simple input with commented out variable', () async {
         file.writeAsString(
           ' EMAIL=email@example.com  \n#PASSWORD=ny4ncat # The password for the API\n',
         );
 
-        expect(reader.fromFile(), equals({'EMAIL': 'email@example.com'}));
+        expect(await reader.fromFile(), equals({'EMAIL': 'email@example.com'}));
       });
 
-      test('reads correct input containing # characters in values', () {
+      test('reads correct input containing # characters in values', () async {
         file.writeAsString(
           'URL="https://example.com/#section"\nFRAGMENT="value#with#hashes"\n',
         );
 
         expect(
-          reader.fromFile(),
+          await reader.fromFile(),
           equals({
             'URL': 'https://example.com/#section',
             'FRAGMENT': 'value#with#hashes',
@@ -123,13 +123,13 @@ void _test(Platform platform) {
         );
       });
 
-      test('treats # as comment delimiter in unquoted values', () {
+      test('treats # as comment delimiter in unquoted values', () async {
         file.writeAsString(
           'URL=https://example.com/ # This is a comment\nFRAGMENT=value # Another comment\n',
         );
 
         expect(
-          reader.fromFile(),
+          await reader.fromFile(),
           equals({'URL': 'https://example.com/', 'FRAGMENT': 'value'}),
         );
       });

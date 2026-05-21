@@ -74,19 +74,19 @@ void _test(Platform platform) {
       },
     );
 
-    test('finds test when target is a file', () {
+    test('finds test when target is a file', () async {
       // given
       final target = fs.path.join('integration_test', 'app_test.dart');
       fs.file(target).createSync(recursive: true);
 
       // when
-      final found = testFinder.findTests([target]);
+      final found = await testFinder.findTests([target]);
 
       // then
       expect(found, equals([fs.path.join(fs.currentDirectory.path, target)]));
     });
 
-    test('finds tests when target is a directory', () {
+    test('finds tests when target is a directory', () async {
       // given
       final dir = fs.directory(
         fs.path.join('integration_test', 'features', 'auth'),
@@ -99,7 +99,7 @@ void _test(Platform platform) {
 
       // when
       final path = fs.path.join('integration_test', 'features', 'auth');
-      final found = testFinder.findTests([path]);
+      final found = await testFinder.findTests([path]);
 
       // then
       expect(
@@ -113,7 +113,7 @@ void _test(Platform platform) {
 
     test(
       'finds tests when target is a directory containing another directory',
-      () {
+      () async {
         // given
         final dir = fs.directory(
           fs.path.join('integration_test', 'features', 'auth'),
@@ -126,7 +126,7 @@ void _test(Platform platform) {
 
         // when
         final path = fs.path.join('integration_test', 'features');
-        final found = testFinder.findTests([path]);
+        final found = await testFinder.findTests([path]);
 
         // then
         final wd = fs.currentDirectory.path;
@@ -140,7 +140,7 @@ void _test(Platform platform) {
       },
     );
 
-    test('finds tests recursively when target is a directory', () {
+    test('finds tests recursively when target is a directory', () async {
       // given
       final dir = fs.directory(fs.path.join('integration_test', 'auth'))
         ..createSync(recursive: true);
@@ -153,7 +153,7 @@ void _test(Platform platform) {
       // when+then
       final wd = fs.currentDirectory.absolute.path;
       expect(
-        testFinder.findTests([fs.path.join('integration_test', 'auth')]),
+        await testFinder.findTests([fs.path.join('integration_test', 'auth')]),
         equals([
           fs.path.join(wd, 'integration_test', 'auth', 'login_test.dart'),
           fs.path.join(wd, 'integration_test', 'auth', 'register_test.dart'),
@@ -161,7 +161,7 @@ void _test(Platform platform) {
       );
 
       expect(
-        testFinder.findTests([
+        await testFinder.findTests([
           fs.path.join('integration_test', 'auth${fs.path.separator}'),
         ]),
         equals([
@@ -172,7 +172,7 @@ void _test(Platform platform) {
       );
     });
 
-    test('finds tests when targets are files and directories', () {
+    test('finds tests when targets are files and directories', () async {
       // given
       final testRoot = fs.directory('integration_test')..createSync();
       testRoot.file('app_test.dart').createSync();
@@ -182,7 +182,7 @@ void _test(Platform platform) {
       testRoot.dir('auth').file('register_test.dart').createSync();
 
       // when
-      final found = testFinder.findTests([
+      final found = await testFinder.findTests([
         fs.path.join('integration_test', 'app_test.dart'),
         fs.path.join('integration_test', 'auth'),
       ]);
@@ -198,13 +198,13 @@ void _test(Platform platform) {
       );
     });
 
-    test('searches for file with provided suffix', () {
+    test('searches for file with provided suffix', () async {
       // given
       final target = fs.path.join('integration_test', 'test_patrol.dart');
       fs.file(target).createSync(recursive: true);
 
       // when
-      final found = testFinder.findTests([target], '_patrol.dart');
+      final found = await testFinder.findTests([target], '_patrol.dart');
 
       // then
       expect(found, equals([fs.path.join(fs.currentDirectory.path, target)]));
@@ -216,14 +216,14 @@ void _test(Platform platform) {
       expect(testFinder.findAllTests, throwsToolExit);
     });
 
-    test('finds all tests when no target is specified', () {
+    test('finds all tests when no target is specified', () async {
       // given
       final dir = fs.directory('integration_test')..createSync();
       dir.childFile('app_test.dart').createSync();
       dir.childFile('permission_test.dart').createSync();
 
       // when
-      final found = testFinder.findAllTests();
+      final found = await testFinder.findAllTests();
 
       // then
       final wd = fs.currentDirectory.path;
@@ -236,7 +236,7 @@ void _test(Platform platform) {
       );
     });
 
-    test('finds tests recursively in the correct order', () {
+    test('finds tests recursively in the correct order', () async {
       final files = [
         fs.path.join('integration_test', 'alpha', 'alpha_test.dart'),
         fs.path.join('integration_test', 'alpha', 'bravo_test.dart'),
@@ -250,14 +250,14 @@ void _test(Platform platform) {
       }
 
       expect(
-        testFinder.findAllTests(),
+        await testFinder.findAllTests(),
         equals(
           files.map((file) => fs.path.join(fs.currentDirectory.path, file)),
         ),
       );
     });
 
-    test('filters out excluded tests', () {
+    test('filters out excluded tests', () async {
       // given
       final files = [
         fs.path.join('integration_test', 'alpha', 'alpha_test.dart'),
@@ -272,7 +272,7 @@ void _test(Platform platform) {
       }
 
       // when
-      final found = testFinder.findAllTests(
+      final found = await testFinder.findAllTests(
         excludes: {
           'other_test.dart', // ignore invalid targets
           fs.path.join('integration_test', 'alpha_test.dart'),
@@ -294,7 +294,7 @@ void _test(Platform platform) {
       );
     });
 
-    test('searches for files with provided custom suffix', () {
+    test('searches for files with provided custom suffix', () async {
       // given
       final files = [
         fs.path.join('integration_test', 'alpha_patrol.dart'),
@@ -305,7 +305,9 @@ void _test(Platform platform) {
       }
 
       // when
-      final found = testFinder.findAllTests(testFileSuffix: '_patrol.dart');
+      final found = await testFinder.findAllTests(
+        testFileSuffix: '_patrol.dart',
+      );
 
       // then
       final wd = fs.currentDirectory.absolute.path;

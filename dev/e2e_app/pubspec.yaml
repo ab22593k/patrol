@@ -36,6 +36,7 @@ dev_dependencies:
   patrol_cli:
     path: ../../packages/patrol_cli
 
+  test_api: any
 flutter:
   uses-material-design: true
   assets:
