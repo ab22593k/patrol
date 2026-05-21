@@ -31,7 +31,6 @@ class _YdotoolKeys {
 ///
 /// Keycode reference: packages/patrol/linux/KEYCODES.md
 class WaylandNativeAutomatorClient extends NativeAutomatorClient {
-
   /// Creates a new WaylandNativeAutomatorClient instance.
   ///
   /// Optionally pass a custom [detectors] list to override the default
@@ -53,6 +52,8 @@ class WaylandNativeAutomatorClient extends NativeAutomatorClient {
   static final _defaultDetectors = <_ScreenSizeDetector>[
     _tryWlrRandr,
     _tryGnomeMonitorConfig,
+    _tryMutterDBus,
+    _tryGDBus,
     _tryKscreenDoctor,
     _tryXrandr,
   ];
@@ -157,6 +158,88 @@ class WaylandNativeAutomatorClient extends NativeAutomatorClient {
       }
     } catch (_) {
       // Not available or not KDE
+    }
+    return null;
+  }
+
+  /// Detect via `busctl` D-Bus call to Mutter DisplayConfig (GNOME Wayland).
+  ///
+  /// Fallback when `gnome-monitor-config` is not installed. Uses the Mutter
+  /// D-Bus API directly to query the first physical monitor's first mode.
+  ///
+  /// busctl output for the mode tuple looks like:
+  /// `(siidua{sv}) "0" 1920 1080 60000.000000 0 a{sv} 0`
+  static Future<(int, int)?> _tryMutterDBus() async {
+    try {
+      final result = await Process.run(
+        'busctl',
+        [
+          '--user',
+          'call',
+          'org.gnome.Mutter.DisplayConfig',
+          '/org/gnome/Mutter/DisplayConfig',
+          'org.gnome.Mutter.DisplayConfig',
+          'GetCurrentState',
+        ],
+        stdoutEncoding: null,
+        stderrEncoding: null,
+      );
+      if (result.exitCode == 0) {
+        final output = (result.stdout as List<int>)
+            .map(String.fromCharCode)
+            .join();
+        // Match the first mode tuple containing "siid" (string, int, int, double).
+        // Captures width and height from: (siidua{sv}) "0" 1920 1080 ...
+        final match = RegExp(
+          r'\([^)]*siid[^)]*\)\s+"[^"]*"\s+(\d+)\s+(\d+)',
+        ).firstMatch(output);
+        if (match != null) {
+          return (int.parse(match.group(1)!), int.parse(match.group(2)!));
+        }
+      }
+    } catch (_) {
+      // Not connected to GNOME session bus or not GNOME Wayland
+    }
+    return null;
+  }
+
+  /// Detect via `gdbus` GVariant call to Mutter DisplayConfig (GNOME Wayland).
+  ///
+  /// Fallback when `gnome-monitor-config` is not installed and `busctl` is
+  /// unavailable (e.g., on systems without systemd). `gdbus` is provided by
+  /// GLib and is available on all GNOME systems.
+  ///
+  /// Parses the first mode tuple in GVariant text format:
+  /// `("1920x1080@60.000", int32 1920, int32 1080, double 60.0, uint32 0, boolean true)`
+  static Future<(int, int)?> _tryGDBus() async {
+    try {
+      final result = await Process.run(
+        'gdbus',
+        [
+          'call',
+          '--session',
+          '--dest=org.gnome.Mutter.DisplayConfig',
+          '--object-path=/org/gnome/Mutter/DisplayConfig',
+          '--method=org.gnome.Mutter.DisplayConfig.GetCurrentState',
+        ],
+        stdoutEncoding: null,
+        stderrEncoding: null,
+      );
+      if (result.exitCode == 0) {
+        final output = (result.stdout as List<int>)
+            .map(String.fromCharCode)
+            .join();
+        // Match the first mode tuple containing width/height after a mode string.
+        // GVariant text: ("1920x1080@60.000", int32 1920, int32 1080, ...)
+        final match = RegExp(
+          r'"[^"]*\d+x\d+[^"]*"\s*,\s*int32\s+(\d+)\s*,\s*int32\s+(\d+)',
+        ).firstMatch(output);
+        if (match != null) {
+          return (int.parse(match.group(1)!), int.parse(match.group(2)!));
+        }
+      }
+    } catch (_) {
+      // gdbus not available or not GNOME Wayland
     }
     return null;
   }

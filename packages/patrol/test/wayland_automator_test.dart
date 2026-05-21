@@ -364,13 +364,140 @@ void main() {
           .toList();
       expect(matches, isEmpty);
     });
+
+    group('Mutter D-Bus (gdbus)', () {
+      test('first mode width and height from GVariant text format', () {
+        // Simulated gdbus GVariant text output for GetCurrentState.
+        const gdbusOutput = '''
+(uint32 1, [((string "eDP-1", string "AUO", string "", string ""),
+  [(string "1920x1080@60.000", int32 1920, int32 1080, double 60.0, uint32 0, boolean true)],
+  {"is-for-lease": <boolean false>})],
+  [(int32 0, int32 0, double 1.0, uint32 0, boolean true,
+    ((string "eDP-1", string "AUO", string "", string ""), [], {}))],
+  (int32 1920, int32 1080))''';
+        final regex = RegExp(
+          r'"[^"]*\d+x\d+[^"]*"\s*,\s*int32\s+(\d+)\s*,\s*int32\s+(\d+)',
+        );
+        final match = regex.firstMatch(gdbusOutput);
+        expect(match, isNotNull);
+        expect(int.parse(match!.group(1)!), equals(1920));
+        expect(int.parse(match.group(2)!), equals(1080));
+      });
+
+      test('4K resolution from GVariant text', () {
+        const gdbusOutput = '''
+(uint32 2, [((string "DP-1", string "DEL", string "", string ""),
+  [(string "3840x2160@60.000", int32 3840, int32 2160, double 60.0, uint32 0, boolean true)],
+  {})],
+  [(int32 0, int32 0, double 1.0, uint32 0, boolean true,
+    ((string "DP-1", string "DEL", string "", string ""), [], {}))],
+  (int32 3840, int32 2160))''';
+        final regex = RegExp(
+          r'"[^"]*\d+x\d+[^"]*"\s*,\s*int32\s+(\d+)\s*,\s*int32\s+(\d+)',
+        );
+        final match = regex.firstMatch(gdbusOutput);
+        expect(match, isNotNull);
+        expect(int.parse(match!.group(1)!), equals(3840));
+        expect(int.parse(match.group(2)!), equals(2160));
+      });
+
+      test('no match when no monitors connected', () {
+        // gdbus output with zero monitors
+        const gdbusOutput = '''(uint32 0, [], [], (int32 0, int32 0))''';
+        final regex = RegExp(
+          r'"[^"]*\d+x\d+[^"]*"\s*,\s*int32\s+(\d+)\s*,\s*int32\s+(\d+)',
+        );
+        final match = regex.firstMatch(gdbusOutput);
+        expect(match, isNull);
+      });
+
+      test('no match for non-GNOME compositor', () {
+        // gdbus output for a non-GNOME D-Bus call (completely unrelated)
+        const unrelatedOutput =
+            '''(uint32 0, [string "org.freedesktop.DBus", string "org.freedesktop.DBus.Properties"])''';
+        final regex = RegExp(
+          r'"[^"]*\d+x\d+[^"]*"\s*,\s*int32\s+(\d+)\s*,\s*int32\s+(\d+)',
+        );
+        final match = regex.firstMatch(unrelatedOutput);
+        expect(match, isNull);
+      });
+    });
+
+    group('Mutter D-Bus (busctl)', () {
+      test('first mode width and height extracted', () {
+        // Simulated busctl output for GetCurrentState with a single 1920x1080 monitor.
+        const busctlOutput = '''
+u 1
+a((ssss)a(siidua{sv})a{sv}) 1
+  (ssss) "eDP-1" "" "" ""
+  a(siidua{sv}) 2
+    (siidua{sv}) "0" 1920 1080 60000.000000 0 a{sv} 0
+    (siidua{sv}) "1" 1366 768 60000.000000 0 a{sv} 0
+  a{sv} 0
+a(siidduba{sv}) 1
+  (siidduba{sv}) "eDP-1" 0 0 1 0 0 1 a{sv} 0
+(ii) 32768 32768''';
+        final regex = RegExp(r'\([^)]*siid[^)]*\)\s+"[^"]*"\s+(\d+)\s+(\d+)');
+        final match = regex.firstMatch(busctlOutput);
+        expect(match, isNotNull);
+        expect(int.parse(match!.group(1)!), equals(1920));
+        expect(int.parse(match.group(2)!), equals(1080));
+      });
+
+      test('first mode for 4K monitor', () {
+        const busctlOutput = '''
+u 2
+a((ssss)a(siidua{sv})a{sv}) 1
+  (ssss) "DP-1" "" "" ""
+  a(siidua{sv}) 3
+    (siidua{sv}) "0" 3840 2160 60000.000000 0 a{sv} 0
+    (siidua{sv}) "1" 2560 1440 60000.000000 0 a{sv} 0
+    (siidua{sv}) "2" 1920 1080 60000.000000 0 a{sv} 0
+  a{sv} 0
+a(siidduba{sv}) 1
+  (siidduba{sv}) "DP-1" 0 0 1 0 0 1 a{sv} 0
+(ii) 32768 32768''';
+        final regex = RegExp(r'\([^)]*siid[^)]*\)\s+"[^"]*"\s+(\d+)\s+(\d+)');
+        final match = regex.firstMatch(busctlOutput);
+        expect(match, isNotNull);
+        // First mode is 3840x2160 (preferred/resolution from first monitor).
+        expect(int.parse(match!.group(1)!), equals(3840));
+        expect(int.parse(match.group(2)!), equals(2160));
+      });
+
+      test('no match when no monitors connected', () {
+        // Output with no monitors connected
+        const busctlOutput = '''
+u 0
+a((ssss)a(siidua{sv})a{sv}) 0
+a(siidduba{sv}) 0
+(ii) 0 0''';
+        final regex = RegExp(r'\([^)]*siid[^)]*\)\s+"[^"]*"\s+(\d+)\s+(\d+)');
+        final match = regex.firstMatch(busctlOutput);
+        expect(match, isNull);
+      });
+
+      test('no match for non-GNOME compositor', () {
+        // busctl returns non-zero (command not found or method not available).
+        // This test verifies the regex doesn't match unrelated D-Bus output.
+        const unrelatedOutput = '''
+u 3
+a(s) 3
+  "org.freedesktop.DBus"
+  "org.freedesktop.DBus.Properties"
+  "org.freedesktop.DBus.Introspectable"''';
+        final regex = RegExp(r'\([^)]*siid[^)]*\)\s+"[^"]*"\s+(\d+)\s+(\d+)');
+        final match = regex.firstMatch(unrelatedOutput);
+        expect(match, isNull);
+      });
+    });
   });
 
   group('Configurable detector priority', () {
     test('default detectors list has expected order', () {
       // Use default constructor — detectors list should match default priority
       final automator = WaylandNativeAutomatorClient(client, uri);
-      expect(automator.detectors.length, equals(4));
+      expect(automator.detectors.length, equals(6));
     });
 
     test('custom detector list overrides default priority', () async {
