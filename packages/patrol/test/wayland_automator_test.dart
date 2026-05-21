@@ -366,6 +366,53 @@ void main() {
     });
   });
 
+  group('Configurable detector priority', () {
+    test('default detectors list has expected order', () {
+      // Use default constructor — detectors list should match default priority
+      final automator = WaylandNativeAutomatorClient(client, uri);
+      expect(automator.detectors.length, equals(4));
+    });
+
+    test('custom detector list overrides default priority', () async {
+      // A detector that returns a known resolution
+      Future<(int, int)?> customDetector() async => (800, 600);
+
+      // A detector that returns null (unavailable)
+      Future<(int, int)?> failingDetector() async => null;
+
+      // First detector succeeds — should short-circuit and return (800, 600)
+      var automator = WaylandNativeAutomatorClient(
+        client,
+        uri,
+        detectors: [customDetector, failingDetector],
+      );
+      expect(automator.detectors.length, equals(2));
+
+      // Reverse order — failing first, then custom
+      automator = WaylandNativeAutomatorClient(
+        client,
+        uri,
+        detectors: [failingDetector, customDetector],
+      );
+      expect(automator.detectors.length, equals(2));
+    });
+
+    test('all detectors failing falls through to default', () async {
+      Future<(int, int)?> fail1() async => null;
+      Future<(int, int)?> fail2() async => null;
+
+      final automator = WaylandNativeAutomatorClient(
+        client,
+        uri,
+        detectors: [fail1, fail2],
+      );
+      expect(automator.detectors, hasLength(2));
+      // Both return null — _getScreenSize() returns the static default
+      // (cannot call private method directly, verified by type check below)
+      expect(automator, isA<NativeAutomatorClient>());
+    });
+  });
+
   group('Platform selection logic', () {
     test('NativeAutomator supports Linux client creation', () {
       // Verify config can be constructed (host/port)

@@ -3,6 +3,13 @@ import 'dart:io';
 import 'package:patrol/src/native/contracts/contracts.dart';
 import 'package:patrol/src/native/contracts/native_automator_client.dart';
 
+/// Signature for a screen-size detection strategy.
+///
+/// Runs a command and parses its output to extract the current
+/// screen resolution. Returns `(width, height)` on success or `null`
+/// if the method is unavailable or parsing fails.
+typedef _ScreenSizeDetector = Future<(int, int)?> Function();
+
 /// Linux evdev keycodes for ydotool compatibility.
 ///
 /// Source: /usr/include/linux/input-event-codes.h
@@ -24,25 +31,54 @@ class _YdotoolKeys {
 ///
 /// Keycode reference: packages/patrol/linux/KEYCODES.md
 class WaylandNativeAutomatorClient extends NativeAutomatorClient {
-  /// Creates a new WaylandNativeAutomatorClient instance.
-  WaylandNativeAutomatorClient(super.client, super.apiUri, {super.timeout});
 
+  /// Creates a new WaylandNativeAutomatorClient instance.
+  ///
+  /// Optionally pass a custom [detectors] list to override the default
+  /// priority order of screen-size detection strategies.
+  WaylandNativeAutomatorClient(
+    super.client,
+    super.apiUri, {
+    super.timeout,
+    List<_ScreenSizeDetector>? detectors,
+  }) : detectors = detectors ?? _defaultDetectors;
   static const _defaultScreenWidth = 1920;
   static const _defaultScreenHeight = 1080;
 
+  /// Default priority-ordered list of screen-size detectors.
+  ///
+  /// To change priority, reorder this list. To add a strategy, write a
+  /// `static _try*` method and add it here. To use a custom set for a
+  /// particular instance, pass a list to [detectors] in the constructor.
+  static final _defaultDetectors = <_ScreenSizeDetector>[
+    _tryWlrRandr,
+    _tryGnomeMonitorConfig,
+    _tryKscreenDoctor,
+    _tryXrandr,
+  ];
+
+  /// The priority-ordered list of detectors for this instance.
+  ///
+  /// Override this by constructing with a custom list, or rely on
+  /// [_defaultDetectors] for the default priority.
+  final List<_ScreenSizeDetector> detectors;
+
   /// Attempts to detect screen dimensions for converting relative coordinates.
   ///
-  /// ydotool has no `getdisplaygeometry` equivalent, so this tries several
-  /// compositor-specific approaches before falling back to a default.
-  ///
-  /// 1. `wlr-randr` — wlroots-based compositors (Sway, Hyprland, etc.)
-  /// 2. `gnome-monitor-config list` — GNOME Wayland
-  /// 3. `kscreen-doctor --outputs` — KDE Plasma Wayland
-  /// 4. `xrandr` — XWayland fallback (works on GNOME, KDE, wlroots)
-  /// 5. Default 1920×1080
-  /// Returns `(width, height)`.
+  /// Tries each strategy in [detectors] priority order.
+  /// Falls back to 1920×1080 if all return `null`.
   Future<(int, int)> _getScreenSize() async {
-    // Try wlr-randr (wlroots-based compositors: Sway, Hyprland, etc.)
+    for (final detect in detectors) {
+      final result = await detect();
+      if (result != null) return result;
+    }
+    return (_defaultScreenWidth, _defaultScreenHeight);
+  }
+
+  /// Detect via `wlr-randr` (wlroots compositors: Sway, Hyprland, …).
+  ///
+  /// Parses lines like: `HDMI-A-1 … 1920x1080 px`
+  static Future<(int, int)?> _tryWlrRandr() async {
     try {
       final result = await Process.run(
         'wlr-randr',
@@ -54,9 +90,7 @@ class WaylandNativeAutomatorClient extends NativeAutomatorClient {
         final output = (result.stdout as List<int>)
             .map(String.fromCharCode)
             .join();
-        // Parse lines like: "HDMI-A-1 ... 1920x1080 px"
-        final lines = output.split('\n');
-        for (final line in lines) {
+        for (final line in output.split('\n')) {
           final match = RegExp(r'(\d+)x(\d+)\s+px').firstMatch(line);
           if (match != null) {
             return (int.parse(match.group(1)!), int.parse(match.group(2)!));
@@ -64,15 +98,15 @@ class WaylandNativeAutomatorClient extends NativeAutomatorClient {
         }
       }
     } catch (_) {
-      // Fall through to next method
+      // Not available or not a wlroots compositor
     }
+    return null;
+  }
 
-    // Try gnome-monitor-config (GNOME Wayland)
-    // This reads from Mutter's D-Bus DisplayConfig via a dedicated tool.
-    // Output format:
-    //   Output 'eDP-1':
-    //     Mode: 1920x1080@60.000 (current)
-    //     ...
+  /// Detect via `gnome-monitor-config list` (GNOME Wayland).
+  ///
+  /// Parses lines like: `Mode: 1920x1080@60.000 (current)`
+  static Future<(int, int)?> _tryGnomeMonitorConfig() async {
     try {
       final result = await Process.run(
         'gnome-monitor-config',
@@ -84,11 +118,7 @@ class WaylandNativeAutomatorClient extends NativeAutomatorClient {
         final output = (result.stdout as List<int>)
             .map(String.fromCharCode)
             .join();
-        // Look for a mode marked "(current)": "1920x1080@60.000 (current)"
-        // or "1920x1080 (current)" or "1920x1080@60* (current)"
-        final lines = output.split('\n');
-        for (final line in lines) {
-          // Mode lines: "1920x1080@60.000 (current)" or "1920x1080 (current)"
+        for (final line in output.split('\n')) {
           final match = RegExp(
             r'(\d+)x(\d+)(?:@\S+)?\s+\(current\)',
           ).firstMatch(line);
@@ -98,10 +128,15 @@ class WaylandNativeAutomatorClient extends NativeAutomatorClient {
         }
       }
     } catch (_) {
-      // Fall through to next method
+      // Not available or not GNOME
     }
+    return null;
+  }
 
-    // Try kscreen-doctor (KDE Plasma Wayland)
+  /// Detect via `kscreen-doctor --outputs` (KDE Plasma Wayland).
+  ///
+  /// Parses lines like: `0:3840x2160@60*!` (current mode marked with `*!`)
+  static Future<(int, int)?> _tryKscreenDoctor() async {
     try {
       final result = await Process.run(
         'kscreen-doctor',
@@ -113,25 +148,23 @@ class WaylandNativeAutomatorClient extends NativeAutomatorClient {
         final output = (result.stdout as List<int>)
             .map(String.fromCharCode)
             .join();
-        // Parse lines like:
-        // "Output: 1 DP-1 enabled ... Modes: 0:3840x2160@60*! 1:3840x2160@30 ..."
-        // Current mode is marked with *!
         for (final line in output.split('\n')) {
-          final modeMatch = RegExp(r'(\d+)x(\d+)@.*\*!').firstMatch(line);
-          if (modeMatch != null) {
-            return (
-              int.parse(modeMatch.group(1)!),
-              int.parse(modeMatch.group(2)!),
-            );
+          final match = RegExp(r'(\d+)x(\d+)@.*\*!').firstMatch(line);
+          if (match != null) {
+            return (int.parse(match.group(1)!), int.parse(match.group(2)!));
           }
         }
       }
     } catch (_) {
-      // Fall through to next method
+      // Not available or not KDE
     }
+    return null;
+  }
 
-    // Try xrandr (XWayland fallback — works on GNOME, KDE, and wlroots
-    // compositors that run XWayland, which is most of them)
+  /// Detect via `xrandr --current` (XWayland fallback).
+  ///
+  /// Parses the header line: `Screen 0: … current 1920 x 1080 …`
+  static Future<(int, int)?> _tryXrandr() async {
     try {
       final result = await Process.run(
         'xrandr',
@@ -143,8 +176,6 @@ class WaylandNativeAutomatorClient extends NativeAutomatorClient {
         final output = (result.stdout as List<int>)
             .map(String.fromCharCode)
             .join();
-        // Parse the first line containing "current":
-        // "Screen 0: minimum 320 x 200, current 1920 x 1080, maximum 8192 x 8192"
         final firstLine = output
             .split('\n')
             .firstWhere((l) => l.contains('current'), orElse: () => '');
@@ -156,11 +187,9 @@ class WaylandNativeAutomatorClient extends NativeAutomatorClient {
         }
       }
     } catch (_) {
-      // Fall through to default
+      // XWayland not available
     }
-
-    // Fallback default (1920x1080 is the most common resolution)
-    return (_defaultScreenWidth, _defaultScreenHeight);
+    return null;
   }
 
   /// Run ydotool with the given arguments.
