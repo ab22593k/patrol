@@ -203,8 +203,7 @@ logging.basicConfig(level=logging.DEBUG)
 ```
 linux/
 ├── src/
-│   ├── linux_automator_service.py    # Main automation service
-│   └── linux_native_automator_client.dart  # Dart client
+│   └── linux_automator_service.py    # Main automation service
 ├── requirements.txt                  # Python dependencies
 ├── setup.sh                         # Installation script
 ├── linux_automator.sh              # Startup script

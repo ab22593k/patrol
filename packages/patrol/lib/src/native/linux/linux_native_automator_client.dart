@@ -370,44 +370,153 @@ class LinuxNativeAutomatorClient extends NativeAutomatorClient {
     await Process.run('xdotool', ['click', '1']);
   }
 
+  /// Recursively collects all [NativeView]s in [views] (and their children)
+  /// that match the given [selector].
+  List<NativeView> _findMatchingViews(
+    List<NativeView> views,
+    Selector selector,
+  ) {
+    final result = <NativeView>[];
+    for (final view in views) {
+      if (_matchesSelector(view, selector)) {
+        result.add(view);
+      }
+      result.addAll(_findMatchingViews(view.children, selector));
+    }
+    return result;
+  }
+
   @override
   Future<GetNativeViewsResponse> getNativeViews(
     GetNativeViewsRequest request,
   ) async {
-    // Get native views from the Linux automator service via HTTP
-    // This uses the parent class's HTTP client indirectly
-    // For now, return an empty response - full implementation requires HTTP access
-    stderr.writeln(
-      'Patrol (Linux): getNativeViews via AT-SPI requires the Python service to be running',
+    final selector = request.selector;
+    if (selector == null) {
+      // No filter: return the full UI tree roots.
+      final tree = await getNativeUITree(
+        GetNativeUITreeRequest(useNativeViewHierarchy: true),
+      );
+      return GetNativeViewsResponse(
+        nativeViews: tree.roots,
+        iosNativeViews: [],
+        androidNativeViews: [],
+      );
+    }
+
+    // Use getNativeUITree() (which is fully functional on Linux via the
+    // Python service) and filter the tree locally using the selector.
+    final tree = await getNativeUITree(
+      GetNativeUITreeRequest(useNativeViewHierarchy: true),
     );
+
+    final allMatching = _findMatchingViews(tree.roots, selector);
+    final instance = selector.instance;
+    final matchingViews = instance != null
+        ? (allMatching.length > instance
+              ? [allMatching[instance]]
+              : <NativeView>[])
+        : allMatching;
+
     return GetNativeViewsResponse(
-      nativeViews: [],
+      nativeViews: matchingViews,
       iosNativeViews: [],
       androidNativeViews: [],
     );
   }
 
+  /// Checks whether a [NativeView] matches the given [Selector].
+  ///
+  /// Compares each non-null field in [selector] against the corresponding
+  /// field in [view]. All specified fields must match for this to return true.
+  bool _matchesSelector(NativeView view, Selector selector) {
+    if (selector.text != null && view.text != selector.text) {
+      return false;
+    }
+    if (selector.textStartsWith != null &&
+        (view.text == null ||
+            !view.text!.startsWith(selector.textStartsWith!))) {
+      return false;
+    }
+    if (selector.textContains != null &&
+        (view.text == null || !view.text!.contains(selector.textContains!))) {
+      return false;
+    }
+    if (selector.className != null && view.className != selector.className) {
+      return false;
+    }
+    if (selector.contentDescription != null &&
+        view.contentDescription != selector.contentDescription) {
+      return false;
+    }
+    if (selector.contentDescriptionStartsWith != null &&
+        (view.contentDescription == null ||
+            !view.contentDescription!.startsWith(
+              selector.contentDescriptionStartsWith!,
+            ))) {
+      return false;
+    }
+    if (selector.contentDescriptionContains != null &&
+        (view.contentDescription == null ||
+            !view.contentDescription!.contains(
+              selector.contentDescriptionContains!,
+            ))) {
+      return false;
+    }
+    if (selector.resourceId != null &&
+        view.resourceName != selector.resourceId) {
+      return false;
+    }
+    if (selector.enabled != null && view.enabled != selector.enabled) {
+      return false;
+    }
+    if (selector.focused != null && view.focused != selector.focused) {
+      return false;
+    }
+    if (selector.pkg != null && view.applicationPackage != selector.pkg) {
+      return false;
+    }
+    return true;
+  }
+
+  /// Recursively counts how many [NativeView]s in [views] (and their children)
+  /// match the given [selector].
+  int _countMatchingViews(List<NativeView> views, Selector selector) {
+    var count = 0;
+    for (final view in views) {
+      if (_matchesSelector(view, selector)) {
+        count++;
+      }
+      count += _countMatchingViews(view.children, selector);
+    }
+    return count;
+  }
+
   @override
   Future<void> waitUntilVisible(WaitUntilVisibleRequest request) async {
-    // Implement polling for visibility
+    final selector = request.selector;
+    if (selector == null) {
+      throw Exception('waitUntilVisible requires a non-null selector');
+    }
+
     final startTime = DateTime.now();
     final timeout = Duration(milliseconds: request.timeoutMillis ?? 10000);
 
     while (DateTime.now().difference(startTime) < timeout) {
       try {
-        final views = await getNativeViews(
-          GetNativeViewsRequest(
-            selector: request.selector,
-            appId: request.appId,
-          ),
+        // Use getNativeUITree() (which is fully functional on Linux via the
+        // Python service) and filter the tree locally using the selector.
+        final tree = await getNativeUITree(
+          GetNativeUITreeRequest(useNativeViewHierarchy: true),
         );
-        if (views.nativeViews.isNotEmpty ||
-            views.androidNativeViews.isNotEmpty ||
-            views.iosNativeViews.isNotEmpty) {
+
+        final matchingCount = _countMatchingViews(tree.roots, selector);
+        final requiredCount = (selector.instance ?? 0) + 1;
+
+        if (matchingCount >= requiredCount) {
           return;
         }
       } catch (e) {
-        // Continue polling
+        // Continue polling on transient errors
       }
       await Future<void>.delayed(const Duration(milliseconds: 500));
     }

@@ -30,9 +30,7 @@ void main() {
       if (!io.Platform.isLinux) {
         return;
       }
-      const config = NativeAutomatorConfig(
-        packageName: 'test.app',
-      );
+      const config = NativeAutomatorConfig(packageName: 'test.app');
       final automator = NativeAutomator(config: config);
       // On Linux, it should use the android app name as fallback
       expect(automator.resolvedAppId, isNotEmpty);
