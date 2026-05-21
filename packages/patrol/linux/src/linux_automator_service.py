@@ -13,6 +13,7 @@ Requirements:
 
 import json
 import logging
+import os
 import subprocess
 import time
 from typing import Dict, List, Optional, Any
@@ -23,6 +24,34 @@ from pyatspi import Accessible
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+def _check_wayland():
+    """Check if running under Wayland and warn that xdotool won't work."""
+    session_type = os.environ.get("XDG_SESSION_TYPE", "").lower()
+    if session_type == "wayland":
+        logger.warning(
+            "=" * 70
+        )
+        logger.warning(
+            "WARNING: XDG_SESSION_TYPE is 'wayland'. The Linux native automation service "
+        )
+        logger.warning(
+            "uses xdotool, which only works on X11. Click, type, key, and swipe "
+        )
+        logger.warning(
+            "operations will likely fail. To resolve this, either:"
+        )
+        logger.warning(
+            "  1. Log in to an X11 session (select 'X11' at the login screen)"
+        )
+        logger.warning(
+            "  2. Set XDG_SESSION_TYPE=x11 before starting the service"
+        )
+        logger.warning(
+            "=" * 70
+        )
+        return False
+    return True
 
 app = Flask(__name__)
 
@@ -37,6 +66,7 @@ class LinuxAutomator:
 
     def _initialize_desktop(self):
         """Initialize desktop accessibility connection"""
+        _check_wayland()
         try:
             self.desktop = pyatspi.Registry.getDesktop(0)
             logger.info("Connected to desktop accessibility")

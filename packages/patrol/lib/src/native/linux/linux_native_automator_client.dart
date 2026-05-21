@@ -14,7 +14,9 @@ class LinuxNativeAutomatorClient extends NativeAutomatorClient {
   /// [client] - The underlying client for communication.
   /// [apiUri] - The API URI for the native automator service.
   /// [timeout] - The timeout for operations.
-  LinuxNativeAutomatorClient(super.client, super.apiUri, {super.timeout});
+  LinuxNativeAutomatorClient(super.client, super.apiUri, {super.timeout}) {
+    _warnIfWayland();
+  }
 
   /// Simulates pressing the back button on Linux.
   ///
@@ -572,11 +574,42 @@ class LinuxNativeAutomatorClient extends NativeAutomatorClient {
 
   @override
   Future<void> initialize() async {
+    // Warn if running under Wayland — xdotool is X11-only
+    _warnIfWayland();
+
     // Linux initialization - the Python service should already be running
     stderr.writeln(
       'Patrol (Linux): Ensure linux_automator_service.py is running on port 8081',
     );
   }
+
+  /// Checks XDG_SESSION_TYPE and warns if running on Wayland.
+  /// Only emits the warning once (on the first call) to avoid noise.
+  void _warnIfWayland() {
+    if (_waylandWarningEmitted) return;
+    _waylandWarningEmitted = true;
+
+    final sessionType = Platform.environment['XDG_SESSION_TYPE'];
+    if (sessionType != null && sessionType.toLowerCase() == 'wayland') {
+      stderr.writeln();
+      stderr.writeln('=' * 70);
+      stderr.writeln(
+        'WARNING: XDG_SESSION_TYPE is "wayland". The Linux native automator',
+      );
+      stderr.writeln(
+        'uses xdotool, which only works on X11. Click, type, key, and swipe',
+      );
+      stderr.writeln('operations will likely fail. To resolve this, either:');
+      stderr.writeln(
+        '  1. Log in to an X11 session (select "X11" at the login screen)',
+      );
+      stderr.writeln('  2. Set XDG_SESSION_TYPE=x11 before running your tests');
+      stderr.writeln('=' * 70);
+      stderr.writeln();
+    }
+  }
+
+  static var _waylandWarningEmitted = false;
 
   @override
   Future<void> configure(ConfigureRequest request) async {

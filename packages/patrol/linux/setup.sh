@@ -12,6 +12,17 @@ if [[ "$OSTYPE" != "linux-gnu"* ]]; then
     exit 1
 fi
 
+# Check if running under Wayland — xdotool is X11-only
+if [[ "${XDG_SESSION_TYPE,,}" == "wayland" ]]; then
+    echo ""
+    echo "WARNING: XDG_SESSION_TYPE is 'wayland'. The Linux native automation service"
+    echo "uses xdotool, which only works on X11. Click, type, key, and swipe"
+    echo "operations will likely fail. To resolve this, either:"
+    echo "  1. Log in to an X11 session (select 'X11' at the login screen)"
+    echo "  2. Set XDG_SESSION_TYPE=x11 before starting the service"
+    echo ""
+fi
+
 # Install system dependencies
 echo "Installing system dependencies..."
 
